@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "io.vykronis.contracts.observability-event.schema.json",
+  "title": "ObservabilityEvent",
+  "description": "Canonical observability event ingested across the Vykronis platform.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "timestamp", "source", "serviceId", "env", "type", "payload"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "source": { "type": "string" },
+    "serviceId": { "type": "string" },
+    "env": { "enum": ["DEV", "PROD"] },
+    "type": { "enum": ["METRIC", "LOG", "TRACE", "JFR", "DEPLOY"] },
+    "payload": { "type": "object" },
+    "traceId": { "type": ["string", "null"] }
+  }
+}
