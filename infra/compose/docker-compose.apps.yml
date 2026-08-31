@@ -1,0 +1,73 @@
+# Vykronis — platform application services (overlay on top of core).
+#
+# Usage (from the repo root):
+#   docker compose -f infra/compose/docker-compose.yml \
+#                 -f infra/compose/docker-compose.apps.yml up -d --build
+name: vykronis
+
+services:
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: platform/api-gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+    profiles: ["apps"]
+
+  ingestion-service:
+    build:
+      context: ../..
+      dockerfile: platform/ingestion-service/Dockerfile
+    ports:
+      - "8081:8081"
+    profiles: ["apps"]
+
+  event-service:
+    build:
+      context: ../..
+      dockerfile: platform/event-service/Dockerfile
+    ports:
+      - "8082:8082"
+    profiles: ["apps"]
+
+  correlation-engine:
+    build:
+      context: ../..
+      dockerfile: platform/correlation-engine/Dockerfile
+    ports:
+      - "8083:8083"
+    profiles: ["apps"]
+
+  incident-service:
+    build:
+      context: ../..
+      dockerfile: platform/incident-service/Dockerfile
+    ports:
+      - "8084:8084"
+    profiles: ["apps"]
+
+  agent-orchestrator:
+    build:
+      context: ../..
+      dockerfile: platform/agent-orchestrator/Dockerfile
+    ports:
+      - "8085:8085"
+    profiles: ["apps"]
+
+  policy-service:
+    build:
+      context: ../..
+      dockerfile: platform/policy-service/Dockerfile
+    ports:
+      - "8086:8086"
+    profiles: ["apps"]
+
+  remediation-service:
+    build:
+      context: ../..
+      dockerfile: platform/remediation-service/Dockerfile
+    ports:
+      - "8087:8087"
+    profiles: ["apps"]
