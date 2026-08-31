@@ -1,0 +1,45 @@
+# ---- Gradle ----
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+out/
+
+# ---- Java / IDE ----
+*.class
+*.jar
+!.gradle/wrapper/gradle-wrapper.jar
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+target/
+
+# ---- Node / Next.js ----
+node_modules/
+.next/
+out/
+npm-debug.log*
+*.tsbuildinfo
+.next-env.d.ts
+
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Observability local data ----
+data/
+grafana/
+prometheus/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
