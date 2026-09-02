@@ -1,0 +1,40 @@
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGSERIAL PRIMARY KEY,
+    order_id VARCHAR(255) NOT NULL UNIQUE,
+    customer_id VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    total_amount DECIMAL(10,2),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    id BIGSERIAL PRIMARY KEY,
+    payment_id VARCHAR(255) NOT NULL UNIQUE,
+    order_id VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    amount DECIMAL(10,2),
+    currency VARCHAR(10) NOT NULL,
+    paid_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS inventory (
+    id BIGSERIAL PRIMARY KEY,
+    sku VARCHAR(255) NOT NULL UNIQUE,
+    product_name VARCHAR(255) NOT NULL,
+    quantity INTEGER NOT NULL,
+    reserved_quantity INTEGER NOT NULL DEFAULT 0,
+    last_checked TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGSERIAL PRIMARY KEY,
+    notification_id VARCHAR(255) NOT NULL UNIQUE,
+    recipient VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    payload JSONB,
+    sent_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
