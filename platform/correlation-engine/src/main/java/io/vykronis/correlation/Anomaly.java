@@ -1,6 +1,7 @@
 package io.vykronis.correlation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.vykronis.contracts.model.Env;
 
 import java.time.Instant;
 
@@ -11,6 +12,7 @@ import java.time.Instant;
  * {@link io.vykronis.contracts.model.IncidentCandidate} onto {@code obs.alerts}.
  *
  * @param serviceId   the affected service
+ * @param env         environment the anomaly was observed in
  * @param windowStart start of the anomalous window
  * @param windowEnd   end of the anomalous window
  * @param stats       aggregated statistics over the window
@@ -19,6 +21,7 @@ import java.time.Instant;
  */
 public record Anomaly(
         String serviceId,
+        Env env,
         @JsonProperty("windowStart") Instant windowStart,
         @JsonProperty("windowEnd") Instant windowEnd,
         WindowStats stats,

@@ -22,6 +22,7 @@
     <modules>
         <module>contracts</module>
         <module>libs/common</module>
+        <module>libs/common-web</module>
         <module>platform/api-gateway</module>
         <module>platform/ingestion-service</module>
         <module>platform/event-service</module>

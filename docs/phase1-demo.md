@@ -29,7 +29,11 @@ Wait for Kafka, Postgres, Redis to be healthy.
 ```
 
 ### 4. Trigger Error Burst
-The `demo-service` automatically generates traffic on startup (via `DemoRunner`). It produces error burst events to Kafka topic `obs.metrics`.
+Start the `demo-service` with the `demo-traffic` profile (auto-generation is profile-gated so a plain boot never spams metrics):
+```bash
+mvn -pl platform/demo-service spring-boot:run -Dspring-boot.run.profiles=demo-traffic
+```
+`DemoRunner` then produces error burst events to Kafka topic `obs.metrics`.
 
 Or manually:
 ```bash

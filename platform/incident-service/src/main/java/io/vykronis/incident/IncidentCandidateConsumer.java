@@ -4,6 +4,7 @@ import io.vykronis.common.json.Json;
 import io.vykronis.contracts.model.IncidentCandidate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -27,6 +28,7 @@ public class IncidentCandidateConsumer {
     }
 
     @KafkaListener(topics = "obs.alerts", groupId = "incident-service")
+    @Transactional
     public void onCandidate(IncidentCandidate candidate) {
         if (candidate == null) {
             return;

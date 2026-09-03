@@ -38,11 +38,10 @@ public class IncidentController {
 
     @GetMapping("/{incidentId}")
     public ResponseEntity<?> byId(@PathVariable String incidentId) {
-        if (repository.findByIncidentId(incidentId).isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiError.notFound("Incident not found: " + incidentId, java.util.UUID.randomUUID()));
-        }
-        return ResponseEntity.ok(toSummary(repository.findByIncidentId(incidentId).get()));
+        return repository.findByIncidentId(incidentId)
+                .<ResponseEntity<?>>map(i -> ResponseEntity.ok(toSummary(i)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiError.notFound("Incident not found: " + incidentId, java.util.UUID.randomUUID())));
     }
 
     private Map<String, Object> toSummary(Incident i) {

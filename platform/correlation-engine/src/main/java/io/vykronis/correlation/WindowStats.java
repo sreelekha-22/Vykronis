@@ -1,6 +1,7 @@
 package io.vykronis.correlation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.vykronis.contracts.model.Env;
 
 import java.time.Instant;
 
@@ -10,6 +11,7 @@ import java.time.Instant;
  * Kafka Streams state store as JSON.
  *
  * @param serviceId   the service the window covers
+ * @param env         environment the window's samples came from
  * @param sampleCount number of metric samples aggregated
  * @param errorCount  cumulative error count across samples
  * @param errorRateMin observed minimum error_rate sample
@@ -19,6 +21,7 @@ import java.time.Instant;
  */
 public record WindowStats(
         String serviceId,
+        Env env,
         long sampleCount,
         long errorCount,
         double errorRateMin,
@@ -33,6 +36,7 @@ public record WindowStats(
         double lat = sample.latencyMs();
         return new WindowStats(
                 serviceId,
+                env,
                 sampleCount + 1,
                 errorCount + sample.errorCount(),
                 Math.min(errorRateMin, er),
@@ -48,6 +52,7 @@ public record WindowStats(
                                       Instant windowStart, Instant windowEnd) {
         return new WindowStats(
                 serviceId,
+                sample.env(),
                 1,
                 sample.errorCount(),
                 sample.errorRate(),
@@ -59,9 +64,10 @@ public record WindowStats(
         );
     }
 
-    public static WindowStats empty(String serviceId, Instant windowStart, Instant windowEnd) {
+    public static WindowStats empty(String serviceId, Env env, Instant windowStart, Instant windowEnd) {
         return new WindowStats(
                 serviceId,
+                env,
                 0,
                 0,
                 Double.MAX_VALUE,

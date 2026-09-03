@@ -25,6 +25,10 @@ curl -X POST "http://localhost:8085/api/demo/deploy/payment-service?version=1.4.
 ```
 
 ### 3. Let the error burst flow
+`run-local.bat` does **not** launch the demo-service automatically. Start it with the `demo-traffic` profile (auto-generation is profile-gated so the service never spams metrics on a plain boot):
+```bash
+mvn -pl platform/demo-service spring-boot:run -Dspring-boot.run.profiles=demo-traffic
+```
 `DemoRunner` emits a ~6-sample error burst for `payment-service` (error_rate 45–65%) every 12 iterations (~6 seconds). The correlation engine:
 - windows `obs.metrics` into 1-minute tumbling windows
 - aggregates `error_count`, `error_rate`, latency

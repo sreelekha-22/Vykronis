@@ -44,7 +44,7 @@ class IngestionControllerTest {
     @Test
     void ingestProducesEventToMetricsTopicKeyedByEventId() {
         ObservabilityEvent event = sampleEvent();
-        controller.ingest(event);
+        var response = controller.ingest(event);
 
         ArgumentCaptor<String> topic = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> key = ArgumentCaptor.forClass(String.class);
@@ -54,5 +54,7 @@ class IngestionControllerTest {
         assertThat(topic.getValue()).isEqualTo("obs.metrics");
         assertThat(key.getValue()).isEqualTo("11111111-1111-1111-1111-111111111111");
         assertThat(value.getValue()).isEqualTo(event);
+        assertThat(response.getStatusCode().value()).isEqualTo(202);
+        assertThat(response.getBody()).containsEntry("id", event.id().toString());
     }
 }

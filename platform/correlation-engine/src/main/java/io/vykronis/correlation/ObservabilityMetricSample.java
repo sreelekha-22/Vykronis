@@ -1,5 +1,7 @@
 package io.vykronis.correlation;
 
+import io.vykronis.contracts.model.Env;
+
 import java.time.Instant;
 
 /**
@@ -9,6 +11,7 @@ import java.time.Instant;
  *
  * @param timestamp   event timestamp
  * @param serviceId   logical service id
+ * @param env         environment the sample originated from
  * @param errorCount  number of errors reported in the sample (0 if absent)
  * @param errorRate   error rate reported in the sample (0 if absent, handled by threshold config)
  * @param latencyMs   latency in ms reported in the sample (0 if absent)
@@ -16,6 +19,7 @@ import java.time.Instant;
 public record ObservabilityMetricSample(
         Instant timestamp,
         String serviceId,
+        Env env,
         long errorCount,
         double errorRate,
         double latencyMs,

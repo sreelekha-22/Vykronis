@@ -2,7 +2,6 @@ package io.vykronis.correlation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.vykronis.contracts.model.DeploymentEvent;
-import io.vykronis.contracts.model.Env;
 import io.vykronis.contracts.model.EventType;
 import io.vykronis.contracts.model.IncidentCandidate;
 import io.vykronis.contracts.model.ObservabilityEvent;
@@ -116,6 +115,7 @@ public class CorrelationTopology {
                                     windowedKey.key(),
                                     new Anomaly(
                                             windowedKey.key(),
+                                            stats.env(),
                                             windowedKey.window().startTime(),
                                             windowedKey.window().endTime(),
                                             stats,
@@ -145,7 +145,7 @@ public class CorrelationTopology {
                 UUID.randomUUID(),
                 Instant.now(),
                 anomaly.serviceId(),
-                Env.PROD,
+                anomaly.env(),
                 severityFor(anomaly.stats()),
                 anomaly.reason(),
                 anomaly.windowStart(),
@@ -159,7 +159,7 @@ public class CorrelationTopology {
         long errorCount = p.has("error_count") ? p.get("error_count").asLong(0) : 0;
         double errorRate = p.has("error_rate") ? p.get("error_rate").asDouble(0.0) : 0.0;
         double latency = p.has("latency_ms") ? p.get("latency_ms").asDouble(0.0) : 0.0;
-        return new ObservabilityMetricSample(evt.timestamp(), serviceId, errorCount, errorRate, latency, evt.traceId());
+        return new ObservabilityMetricSample(evt.timestamp(), serviceId, evt.env(), errorCount, errorRate, latency, evt.traceId());
     }
 
     private boolean breachedThreshold(WindowStats stats) {

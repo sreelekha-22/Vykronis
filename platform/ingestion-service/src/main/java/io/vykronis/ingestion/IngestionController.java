@@ -1,10 +1,14 @@
 package io.vykronis.ingestion;
 
 import io.vykronis.contracts.model.ObservabilityEvent;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 public class IngestionController {
@@ -16,7 +20,9 @@ public class IngestionController {
     }
 
     @PostMapping("/api/ingest/events")
-    public void ingest(@RequestBody ObservabilityEvent event) {
+    public ResponseEntity<Map<String, String>> ingest(@RequestBody ObservabilityEvent event) {
         kafkaTemplate.send("obs.metrics", event.id().toString(), event);
+        return ResponseEntity.accepted()
+                .body(Map.of("id", event.id().toString()));
     }
 }
