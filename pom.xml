@@ -30,6 +30,7 @@
         <module>platform/agent-orchestrator</module>
         <module>platform/policy-service</module>
         <module>platform/remediation-service</module>
+        <module>platform/demo-service</module>
     </modules>
 
     <properties>
