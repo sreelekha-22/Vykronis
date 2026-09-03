@@ -80,4 +80,70 @@ class IncidentCandidateConsumerTest {
         assertThat(open.getErrorCount()).isEqualTo(42);
         assertThat(open.getErrorRate()).isEqualTo(55.0);
     }
+
+    @Test
+    void createsNewIncidentWhenOnlyResolvedExists() {
+        Incident resolved = new Incident();
+        resolved.setStatus(IncidentStatus.RESOLVED.name());
+        resolved.setEnv(Env.PROD.name());
+        when(repository.findByServiceIdOrderByDetectedAtDesc("payment-service"))
+                .thenReturn(List.of(resolved));
+
+        consumer.onCandidate(candidate());
+
+        ArgumentCaptor<Incident> captor = ArgumentCaptor.forClass(Incident.class);
+        verify(repository).save(captor.capture());
+        Incident saved = captor.getValue();
+        assertThat(saved).isNotSameAs(resolved);
+        assertThat(saved.getStatus()).isEqualTo(IncidentStatus.OPEN.name());
+    }
+
+    @Test
+    void ignoresOpenIncidentForDifferentEnv() {
+        Incident openDev = new Incident();
+        openDev.setStatus(IncidentStatus.OPEN.name());
+        openDev.setEnv(Env.DEV.name());
+        when(repository.findByServiceIdOrderByDetectedAtDesc("payment-service"))
+                .thenReturn(List.of(openDev));
+
+        consumer.onCandidate(candidate());
+
+        ArgumentCaptor<Incident> captor = ArgumentCaptor.forClass(Incident.class);
+        verify(repository).save(captor.capture());
+        Incident saved = captor.getValue();
+        assertThat(saved).isNotSameAs(openDev);
+        assertThat(saved.getStatus()).isEqualTo(IncidentStatus.OPEN.name());
+    }
+
+    @Test
+    void nullCandidateIsIgnored() {
+        consumer.onCandidate(null);
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void candidateWithoutMetricsStillOpensIncident() {
+        when(repository.findByServiceIdOrderByDetectedAtDesc("payment-service")).thenReturn(List.of());
+
+        IncidentCandidate noMetrics = new IncidentCandidate(
+                UUID.randomUUID(),
+                Instant.parse("2026-09-03T10:01:00Z"),
+                "payment-service",
+                Env.PROD,
+                Severity.LOW,
+                "reason",
+                Instant.parse("2026-09-03T10:00:00Z"),
+                Instant.parse("2026-09-03T10:01:00Z"),
+                null,
+                null);
+
+        consumer.onCandidate(noMetrics);
+
+        ArgumentCaptor<Incident> captor = ArgumentCaptor.forClass(Incident.class);
+        verify(repository).save(captor.capture());
+        Incident saved = captor.getValue();
+        assertThat(saved.getStatus()).isEqualTo(IncidentStatus.OPEN.name());
+        assertThat(saved.getErrorRate()).isNull();
+        assertThat(saved.getErrorCount()).isNull();
+    }
 }

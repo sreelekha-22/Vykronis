@@ -123,7 +123,7 @@ public class CorrelationTopology {
                                             severityFor(stats).name())));
                 });
 
-        KStream<String, IncidentCandidate> candidates = anomalies.join(
+        KStream<String, IncidentCandidate> candidates = anomalies.leftJoin(
                 deployments,
                 (serviceId, anomaly) -> serviceId,
                 (anomaly, deployment) -> toCandidate(anomaly, deployment));
