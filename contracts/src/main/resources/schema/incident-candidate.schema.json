@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "io.vykronis.contracts.incident-candidate.schema.json",
+  "title": "IncidentCandidate",
+  "description": "Candidate incident emitted by the correlation engine onto obs.alerts when an anomaly is detected.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["candidateId", "timestamp", "serviceId", "env", "severity", "windowStart", "windowEnd"],
+  "properties": {
+    "candidateId": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "serviceId": { "type": "string" },
+    "env": { "enum": ["DEV", "PROD"] },
+    "severity": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+    "reason": { "type": "string" },
+    "windowStart": { "type": "string", "format": "date-time" },
+    "windowEnd": { "type": "string", "format": "date-time" },
+    "metrics": { "type": "object" },
+    "deploymentId": { "type": ["string", "null"] }
+  }
+}

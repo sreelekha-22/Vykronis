@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "io.vykronis.contracts.deployment-event.schema.json",
+  "title": "DeploymentEvent",
+  "description": "Deployment lifecycle record emitted onto obs.deployments, joined by the correlation engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["deploymentId", "serviceId", "version", "environment", "startedAt", "status"],
+  "properties": {
+    "deploymentId": { "type": "string", "format": "uuid" },
+    "serviceId": { "type": "string" },
+    "version": { "type": "string" },
+    "environment": { "enum": ["DEV", "PROD"] },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "finishedAt": { "type": ["string", "null"], "format": "date-time" },
+    "status": { "enum": ["DEPLOYING", "SUCCESS", "FAILED", "ROLLED_BACK"] },
+    "subject": { "type": "string" }
+  }
+}
