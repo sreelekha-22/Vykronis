@@ -34,8 +34,8 @@ npm-debug.log*
 
 # ---- Observability local data ----
 data/
-grafana/
-prometheus/
+infra/compose/grafana/data/
+infra/compose/prometheus/data/
 
 # ---- OS ----
 .DS_Store

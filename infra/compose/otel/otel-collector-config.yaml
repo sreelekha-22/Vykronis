@@ -1,0 +1,28 @@
+# Vykronis OpenTelemetry Collector config (Phase 3 observability profile).
+# Receives OTLP (gRPC on 4317, HTTP on 4318) from the platform services once
+# Micrometer/OTel are wired in (Phase 3 unit 2), and exposes the collected
+# metrics in Prometheus format on 8889/metrics for Prometheus to scrape.
+#
+# NOTE: the collector's own internal telemetry occupies 8888 by default, so the
+# Prometheus exporter must run on 8889 (avoiding a bind conflict).
+#
+# Traces and logs exporters are added in later Phase 3 units (OpenSearch,
+# obs.traces / obs.jfr). For now the pipeline focuses on metrics only.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus]
