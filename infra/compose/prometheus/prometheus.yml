@@ -1,8 +1,7 @@
 # Vykronis Prometheus config (Phase 3 observability profile).
-# Scrapes the OTel Collector (receives OTLP from the platform services once
-# Micrometer/OTel are wired in) and the platform services' actuator metrics
-# endpoints. App targets may report DOWN until Phase 3 unit 2 wires
-# Micrometer — /targets still lists them, which the smoke check relies on.
+# Scrapes the OTel Collector (receives OTLP metrics/traces from the platform
+# services) and the platform services' actuator /actuator/prometheus metrics
+# endpoints (wired via common-observability, Phase 3 unit 2).
 
 global:
   scrape_interval: 15s

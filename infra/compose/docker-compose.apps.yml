@@ -5,6 +5,10 @@
 #                 -f infra/compose/docker-compose.apps.yml up -d --build
 name: vykronis
 
+x-common-otel: &common-otel
+  MANAGEMENT_OTLP_METRICS_EXPORT_URL: http://otel-collector:4318/v1/metrics
+  VYKRONIS_OBSERVABILITY_ENV: dev
+
 services:
   api-gateway:
     build:
@@ -12,6 +16,8 @@ services:
       dockerfile: platform/api-gateway/Dockerfile
     ports:
       - "8080:8080"
+    environment:
+      <<: *common-otel
     depends_on:
       - kafka
     profiles: ["apps"]
@@ -22,6 +28,8 @@ services:
       dockerfile: platform/ingestion-service/Dockerfile
     ports:
       - "8081:8081"
+    environment:
+      <<: *common-otel
     profiles: ["apps"]
 
   event-service:
@@ -30,6 +38,8 @@ services:
       dockerfile: platform/event-service/Dockerfile
     ports:
       - "8082:8082"
+    environment:
+      <<: *common-otel
     profiles: ["apps"]
 
   correlation-engine:
@@ -38,6 +48,8 @@ services:
       dockerfile: platform/correlation-engine/Dockerfile
     ports:
       - "8083:8083"
+    environment:
+      <<: *common-otel
     profiles: ["apps"]
 
   incident-service:
@@ -46,6 +58,8 @@ services:
       dockerfile: platform/incident-service/Dockerfile
     ports:
       - "8084:8084"
+    environment:
+      <<: *common-otel
     profiles: ["apps"]
 
   agent-orchestrator:
@@ -54,6 +68,8 @@ services:
       dockerfile: platform/agent-orchestrator/Dockerfile
     ports:
       - "8085:8085"
+    environment:
+      <<: *common-otel
     profiles: ["apps"]
 
   policy-service:
@@ -62,6 +78,8 @@ services:
       dockerfile: platform/policy-service/Dockerfile
     ports:
       - "8086:8086"
+    environment:
+      <<: *common-otel
     profiles: ["apps"]
 
   remediation-service:
@@ -70,4 +88,6 @@ services:
       dockerfile: platform/remediation-service/Dockerfile
     ports:
       - "8087:8087"
+    environment:
+      <<: *common-otel
     profiles: ["apps"]
