@@ -1,5 +1,7 @@
 package io.vykronis.demo;
 
+import io.vykronis.common.json.Json;
+import io.vykronis.contracts.model.JfrRecord;
 import io.vykronis.contracts.model.ObservabilityEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -18,8 +20,9 @@ import java.util.Map;
 /**
  * Producer wiring for the demo-service. Metrics go out as real JSON
  * {@link ObservabilityEvent}s (so the correlation engine can deserialize them),
- * while deployment records are marshalled to a JSON string by
- * {@link DeploymentService}.
+ * deployment records are marshalled to a JSON string by
+ * {@link DeploymentService}, and JFR chunks stream out as typed
+ * {@link JfrRecord}s keyed by service.
  */
 @Configuration
 public class DemoKafkaConfig {
@@ -40,6 +43,19 @@ public class DemoKafkaConfig {
     @Primary
     public KafkaTemplate<String, ObservabilityEvent> observabilityKafkaTemplate() {
         return new KafkaTemplate<>(demoProducerFactory());
+    }
+
+    @Bean
+    public ProducerFactory<String, JfrRecord> jfrProducerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        return new DefaultKafkaProducerFactory<>(
+                config, new StringSerializer(), new JsonSerializer<>(Json.mapper()));
+    }
+
+    @Bean
+    public KafkaTemplate<String, JfrRecord> jfrKafkaTemplate() {
+        return new KafkaTemplate<>(jfrProducerFactory());
     }
 
     @Bean
