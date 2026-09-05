@@ -4,8 +4,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 
 /**
- * Application-facing facade over {@link IdentityProvider}: the only way gateway
- * components obtain the caller's {@link Identity}.
+ * Application-facing facade over identity resolution: the only way gateway
+ * components obtain the caller's {@link Identity}. Returns the identity
+ * resolved by {@link AuthenticationFilter} when auth is on; otherwise falls
+ * back to the configured {@link IdentityProvider} (anonymous by default).
  */
 @Component
 public class CurrentIdentity {
@@ -17,6 +19,10 @@ public class CurrentIdentity {
     }
 
     public Identity identityOf(ServerWebExchange exchange) {
+        Object attribute = exchange.getAttribute(GatewayAttributes.IDENTITY);
+        if (attribute instanceof Identity identity) {
+            return identity;
+        }
         return provider.identityOf(exchange);
     }
 }
