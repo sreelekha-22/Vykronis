@@ -1,3 +1,4 @@
+import { InvestigatePanel } from '@/components/InvestigatePanel';
 import { Timeline } from '@/components/Timeline';
 import { ApiError, getEvidence, getIncident } from '@/lib/api';
 
@@ -18,6 +19,7 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
 
   return (
     <main>
+      <InvestigatePanel incident={incident} />
       <Timeline incident={incident} from={from} to={to} items={items} />
     </main>
   );

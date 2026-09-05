@@ -79,3 +79,108 @@ body {
 .incident-list a {
   color: #3498db;
 }
+
+.investigate {
+  max-width: 900px;
+  margin: 24px auto 0;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.investigate-action {
+  background: #2980b9;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-size: 1em;
+  cursor: pointer;
+}
+
+.investigate-action:disabled {
+  background: #bdc3c7;
+  cursor: default;
+}
+
+.investigate-note,
+.investigate-error {
+  color: #666;
+  margin: 8px 0 0;
+}
+
+.investigate-error {
+  color: #c0392b;
+}
+
+.hypothesis-panel {
+  margin-bottom: 16px;
+}
+
+.hypothesis-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hypothesis-head h3 {
+  margin: 0;
+}
+
+.hypothesis-statement {
+  font-size: 1.05em;
+  font-weight: 600;
+  margin: 12px 0;
+}
+
+.hypothesis-meta {
+  display: flex;
+  gap: 28px;
+  margin: 0 0 12px;
+}
+
+.hypothesis-meta dt {
+  font-size: 0.75em;
+  text-transform: uppercase;
+  color: #999;
+  letter-spacing: 0.05em;
+}
+
+.hypothesis-meta dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.hypothesis-summary {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.hypothesis-panel h4 {
+  margin: 16px 0 8px;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  color: #999;
+  letter-spacing: 0.05em;
+}
+
+.hypothesis-evidence {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.hypothesis-evidence li {
+  padding: 6px 0;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.hypothesis-evidence .summary {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.hypothesis-empty {
+  color: #999;
+}

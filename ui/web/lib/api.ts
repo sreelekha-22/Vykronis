@@ -1,4 +1,4 @@
-import type { EvidenceItem, IncidentSummary } from '@/lib/types';
+import type { EvidenceItem, Hypothesis, IncidentSummary } from '@/lib/types';
 
 const API_URL: string = process.env.VYKRONIS_API_URL ?? 'http://localhost:8080';
 
@@ -14,12 +14,20 @@ export class ApiError extends Error {
   }
 }
 
-async function getJson(path: string): Promise<unknown> {
-  const response = await fetch(`${API_URL}${path}`, { headers, cache: 'no-store' });
+async function jsonRequest(path: string, init: RequestInit = {}): Promise<unknown> {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers,
+    cache: 'no-store',
+  });
   if (!response.ok) {
     throw new ApiError(response.status, `${path} returned ${response.status}`);
   }
   return response.json() as Promise<unknown>;
+}
+
+async function getJson(path: string): Promise<unknown> {
+  return jsonRequest(path);
 }
 
 interface IncidentDto {
@@ -31,6 +39,44 @@ interface IncidentDto {
   detectedAt?: string;
   windowStart?: string;
   windowEnd?: string;
+  investigatedAt?: string;
+  hypothesis?: unknown;
+}
+
+function toHypothesis(raw: unknown): Hypothesis | undefined {
+  if (raw === null || raw === undefined || typeof raw !== 'object') {
+    return undefined;
+  }
+  const h = raw as {
+    statement?: unknown;
+    summary?: unknown;
+    confidence?: unknown;
+    affectedServiceId?: unknown;
+    affectedServiceVersion?: unknown;
+    source?: unknown;
+    evidence?: unknown;
+  };
+  const evidence = Array.isArray(h.evidence)
+    ? h.evidence.map((item) => {
+        const e = item as { eventId?: unknown; type?: unknown; source?: unknown; summary?: unknown };
+        return {
+          eventId: String(e.eventId ?? 'unknown'),
+          type: String(e.type ?? 'UNKNOWN'),
+          source: String(e.source ?? 'unknown'),
+          summary: e.summary === undefined ? undefined : String(e.summary),
+        };
+      })
+    : [];
+  return {
+    statement: h.statement === undefined ? undefined : String(h.statement),
+    summary: h.summary === undefined ? undefined : String(h.summary),
+    confidence: h.confidence === undefined ? undefined : Number(h.confidence),
+    affectedServiceId: h.affectedServiceId === undefined ? undefined : String(h.affectedServiceId),
+    affectedServiceVersion:
+      h.affectedServiceVersion === undefined ? undefined : String(h.affectedServiceVersion),
+    source: h.source === undefined ? undefined : String(h.source),
+    evidence,
+  };
 }
 
 function toIncident(dto: IncidentDto): IncidentSummary {
@@ -41,6 +87,8 @@ function toIncident(dto: IncidentDto): IncidentSummary {
     status: dto.status ?? 'UNKNOWN',
     title: dto.title,
     detectedAt: dto.detectedAt ?? new Date().toISOString(),
+    investigatedAt: dto.investigatedAt,
+    hypothesis: toHypothesis(dto.hypothesis),
   };
 }
 
@@ -83,4 +131,8 @@ export async function getEvidence(
   const params = new URLSearchParams({ from, to, serviceId: incident.serviceId });
   const hits = (await getJson(`/api/search/events?${params.toString()}`)) as SearchHitDto[];
   return { items: hits.map(toEvidence), from, to };
+}
+
+export async function investigateIncident(incidentId: string): Promise<Hypothesis> {
+  return jsonRequest(`/api/incidents/${incidentId}/investigate`, { method: 'POST' }) as Promise<Hypothesis>;
 }

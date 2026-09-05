@@ -1,4 +1,5 @@
 export type EvidenceType = 'TRACE' | 'LOG' | 'METRIC' | 'JFR' | 'DEPLOYMENT' | string;
+export type HypothesisSource = 'ai' | 'fallback' | string;
 
 export interface EvidenceItem {
   eventId: string;
@@ -12,6 +13,24 @@ export interface EvidenceItem {
   status?: string;
 }
 
+export interface HypothesisEvidence {
+  eventId: string;
+  type: EvidenceType;
+  source: string;
+  summary?: string;
+}
+
+export interface Hypothesis {
+  incidentId?: string;
+  statement?: string;
+  summary?: string;
+  confidence?: number;
+  affectedServiceId?: string;
+  affectedServiceVersion?: string;
+  source?: HypothesisSource;
+  evidence: HypothesisEvidence[];
+}
+
 export interface IncidentSummary {
   incidentId: string;
   serviceId: string;
@@ -19,6 +38,8 @@ export interface IncidentSummary {
   status: string;
   title?: string;
   detectedAt: string;
+  hypothesis?: Hypothesis;
+  investigatedAt?: string;
 }
 
 export interface EvidenceRef {
