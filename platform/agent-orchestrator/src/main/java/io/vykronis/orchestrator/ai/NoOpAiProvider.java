@@ -1,14 +1,12 @@
 package io.vykronis.orchestrator.ai;
 
-import org.springframework.stereotype.Component;
-
 /**
- * Default provider when {@code vykronis.ai.provider=none} (the default). It is
- * never "available" and never completes — a platform must stay fully functional
- * without any LLM. The rule-based fallback (Phase 4) handles investigations in
- * this mode.
+ * The {@code vykronis.ai.provider=none} provider (the default). It is never
+ * "available" and never completes — a platform must stay fully functional
+ * without any LLM. Created by {@link ProviderSelectionConfig} so exactly one
+ * {@link AiProvider} bean exists; the rule-based fallback (Phase 4 Unit 5)
+ * handles investigations in this mode.
  */
-@Component
 public class NoOpAiProvider implements AiProvider {
 
     @Override

@@ -74,6 +74,13 @@ services:
       # (Phase 4 Unit 2) — everything else is denied by the tool HTTP client.
       VYKRONIS_INCIDENT_URL: http://incident-service:8084
       VYKRONIS_EVENT_URL: http://event-service:8082
+      # Config-only provider selection (Phase 4 Unit 4). Default is `none`
+      # (works without any LLM); set VYKRONIS_AI_PROVIDER + VYKRONIS_AI_API_KEY
+      # for a hosted provider, or add the `ai` profile for local Ollama
+      # (VYKRONIS_OLLAMA_URL defaults to the vykronis-ollama service there).
+      VYKRONIS_AI_PROVIDER: ${VYKRONIS_AI_PROVIDER:-none}
+      VYKRONIS_AI_API_KEY: ${VYKRONIS_AI_API_KEY:-}
+      VYKRONIS_OLLAMA_URL: ${VYKRONIS_OLLAMA_URL:-http://vykronis-ollama:11434}
     profiles: ["apps"]
 
   policy-service:

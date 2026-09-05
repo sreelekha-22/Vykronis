@@ -43,6 +43,24 @@
             <version>1.5.9</version>
         </dependency>
 
+        <!-- Spring AI chat models, constructed MANUALLY (no auto-config starters):
+             only the provider selected via vykronis.ai.provider is built, so a
+             missing API key / absent Ollama never breaks context startup.
+             Phase 4 Unit 4. Spring AI 2.0 runs its own Jackson-3 stack internally;
+             the rest of the platform stays on Jackson 2. -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-ollama</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-google-genai</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
