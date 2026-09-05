@@ -18,6 +18,11 @@
     <dependencies>
         <dependency>
             <groupId>io.vykronis</groupId>
+            <artifactId>common</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vykronis</groupId>
             <artifactId>common-observability</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
@@ -28,6 +33,14 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JSON Schema (draft 2020-12) validation of model-produced hypotheses
+             (Phase 4 Unit 3). Jackson-2 based, matches the platform baseline. -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.5.9</version>
         </dependency>
 
         <dependency>
