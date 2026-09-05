@@ -36,6 +36,7 @@ npm-debug.log*
 data/
 infra/compose/grafana/data/
 infra/compose/prometheus/data/
+infra/compose/opensearch/data/
 
 # ---- OS ----
 .DS_Store
