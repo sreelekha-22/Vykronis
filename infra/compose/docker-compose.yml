@@ -138,6 +138,32 @@ services:
       retries: 20
       start_period: 30s
 
+  # ---- auth (Phase 5) ----------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: vykronis-keycloak
+    profiles: ["auth"]
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: vykronis-dev
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/vykronis
+      KC_DB_USERNAME: vykronis
+      KC_DB_PASSWORD: vykronis
+    volumes:
+      - ./keycloak/vykronis-realm.json:/opt/keycloak/data/import/vykronis-realm.json:ro
+    ports:
+      - "8088:8080"   # Admin console + realm endpoints (container default 8080)
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8088 && echo -e 'GET /realms/vykronis HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -c 200 <&3 | grep -q '200 OK' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
   # ---- ai (Phase 4, optional local LLM) -----------------------------------
   ollama:
     image: ollama/ollama:latest
