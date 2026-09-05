@@ -138,9 +138,26 @@ services:
       retries: 20
       start_period: 30s
 
+  # ---- ai (Phase 4, optional local LLM) -----------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: vykronis-ollama
+    profiles: ["ai"]
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"   # Ollama REST API
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
   kafka-data:
   postgres-data:
   redis-data:
   grafana-data:
   opensearch-data:
+  ollama-data:
