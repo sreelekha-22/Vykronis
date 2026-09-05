@@ -2,6 +2,7 @@ package io.vykronis.orchestrator;
 
 import io.vykronis.orchestrator.agent.InvestigationAgent;
 import io.vykronis.orchestrator.ai.AiGateway;
+import io.vykronis.orchestrator.fallback.InvestigationCoordinator;
 import io.vykronis.orchestrator.hypothesis.Hypothesis;
 import io.vykronis.orchestrator.hypothesis.HypothesisSource;
 import io.vykronis.orchestrator.hypothesis.HypothesisValidationException;
@@ -40,11 +41,15 @@ class AgentOrchestratorApplicationTests {
     @Autowired
     private HypothesisValidator hypothesisValidator;
 
+    @Autowired
+    private InvestigationCoordinator investigationCoordinator;
+
     @Test
     void contextBootsWithDenyByDefaultSecurityAndRealTools() {
         assertThat(agent).isNotNull();
         assertThat(gateway.isAvailable()).isFalse();
         assertThat(toolHttpClient).isNotNull();
+        assertThat(investigationCoordinator).isNotNull();
 
         List<String> toolIds = agent.availableTools().stream()
                 .map(t -> t.id())
