@@ -70,6 +70,10 @@ services:
       - "8085:8085"
     environment:
       <<: *common-otel
+      # Only the allow-listed incident/event/search endpoints are ever reachable
+      # (Phase 4 Unit 2) — everything else is denied by the tool HTTP client.
+      VYKRONIS_INCIDENT_URL: http://incident-service:8084
+      VYKRONIS_EVENT_URL: http://event-service:8082
     profiles: ["apps"]
 
   policy-service:
