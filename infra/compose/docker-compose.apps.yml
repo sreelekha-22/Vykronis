@@ -60,6 +60,9 @@ services:
       - "8084:8084"
     environment:
       <<: *common-otel
+      # Investigation coordinator the incident-service calls on
+      # POST /api/incidents/{id}/investigate (Phase 4 Unit 6).
+      VYKRONIS_ORCHESTRATOR_URL: http://agent-orchestrator:8085
     profiles: ["apps"]
 
   agent-orchestrator:

@@ -13,8 +13,10 @@ import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -24,8 +26,14 @@ class IncidentControllerTest {
     @Mock
     private IncidentRepository repository;
 
+    @Mock
+    private InvestigationClient investigationClient;
+
     private MockMvc mockMvc() {
-        return MockMvcBuilders.standaloneSetup(new IncidentController(repository)).build();
+        IncidentService service = new IncidentService(repository, investigationClient);
+        return MockMvcBuilders.standaloneSetup(new IncidentController(service))
+                .setControllerAdvice(new IncidentApiExceptionHandler())
+                .build();
     }
 
     private Incident incident(String serviceId, String status) {
@@ -84,6 +92,45 @@ class IncidentControllerTest {
         when(repository.findByIncidentId("nope")).thenReturn(Optional.empty());
 
         mockMvc().perform(get("/api/incidents/nope"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void investigateTransitionsToHypothesisReadyAndReturnsIt() throws Exception {
+        Incident incident = incident("payment-service", "OPEN");
+        String hypothesis = "{\"statement\":\"suspected deployment\",\"confidence\":0.5,"
+                + "\"affectedServiceId\":\"payment-service\",\"source\":\"fallback\","
+                + "\"evidence\":[{\"eventId\":\"ev-1\",\"type\":\"LOG\",\"source\":\"payment\"}]}";
+        when(repository.findByIncidentId("inc-payment-service")).thenReturn(Optional.of(incident));
+        when(investigationClient.investigate("inc-payment-service")).thenReturn(hypothesis);
+        when(repository.save(incident)).thenReturn(incident);
+
+        String body = mockMvc().perform(post("/api/incidents/inc-payment-service/investigate"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        com.fasterxml.jackson.databind.JsonNode node = io.vykronis.common.json.Json.mapper().readTree(body);
+        assertThat(node.path("status").asText()).isEqualTo("HYPOTHESIS_READY");
+        assertThat(node.path("hypothesis").path("statement").asText()).isEqualTo("suspected deployment");
+    }
+
+    @Test
+    void investigateRejectsIncidentInNonInvestigableState() throws Exception {
+        Incident incident = incident("payment-service", "RESOLVED");
+        when(repository.findByIncidentId("inc-payment-service")).thenReturn(Optional.of(incident));
+
+        mockMvc().perform(post("/api/incidents/inc-payment-service/investigate"))
+                .andExpect(status().isConflict());
+
+        org.mockito.Mockito.verify(investigationClient, org.mockito.Mockito.never())
+                .investigate(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void investigateReturnsNotFoundForUnknownIncident() throws Exception {
+        when(repository.findByIncidentId("nope")).thenReturn(Optional.empty());
+
+        mockMvc().perform(post("/api/incidents/nope/investigate"))
                 .andExpect(status().isNotFound());
     }
 }

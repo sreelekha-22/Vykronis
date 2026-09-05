@@ -64,6 +64,14 @@ public class Incident {
     @Column(columnDefinition = "jsonb")
     private String metadata;
 
+    /** The investigation hypothesis (schema-validated by the orchestrator), when produced. */
+    @Column(columnDefinition = "jsonb")
+    private String hypothesis;
+
+    /** When the last investigation produced a hypothesis. */
+    @Column(name = "investigated_at")
+    private Instant investigatedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -200,6 +208,22 @@ public class Incident {
 
     public String getMetadata() {
         return metadata;
+    }
+
+    public String getHypothesis() {
+        return hypothesis;
+    }
+
+    public void setHypothesis(String hypothesis) {
+        this.hypothesis = hypothesis;
+    }
+
+    public Instant getInvestigatedAt() {
+        return investigatedAt;
+    }
+
+    public void setInvestigatedAt(Instant investigatedAt) {
+        this.investigatedAt = investigatedAt;
     }
 
     public Instant getCreatedAt() {
