@@ -43,7 +43,13 @@ public class InvestigationCoordinator {
         try {
             AiResponse response = gateway.complete(request);
             if (response.content() != null && !response.content().isBlank()) {
-                return validator.validate(response.content());
+                Hypothesis candidate = validator.validate(response.content());
+                if (incidentId.equals(candidate.incidentId())) {
+                    return candidate;
+                }
+                // schema-valid but for a DIFFERENT incident: same trust failure
+                // as schema-invalid output — the model does not decide what it
+                // was asked about (Phase 4 Unit 8 end-to-end suite).
             }
         } catch (AiProviderUnavailableException | HypothesisValidationException e) {
             // provider none/down, or raw output that failed the schema gate
