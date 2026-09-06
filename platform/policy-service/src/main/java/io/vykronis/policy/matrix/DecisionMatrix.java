@@ -5,18 +5,22 @@ import io.vykronis.policy.PolicyAction;
 import io.vykronis.policy.PolicyDecision;
 import io.vykronis.policy.PolicySubject;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 
 /**
  * The environment-based decision matrix: the single source of truth for
- * remediation policy. Rules are evaluated in order; the first row whose
- * action/environment/match predicate hits wins. Anything unmatched is
- * {@link PolicyDecision#DENY} (fail closed).
+ * remediation policy is the declarative {@link #standardTable()} — every
+ * (action, env, caller) combination is spelled out, and {@link #standard()}
+ * is built from it so the runtime can never drift from the table. Rules are
+ * evaluated in order; the first row whose action/environment/match predicate
+ * wins. Anything unmatched is {@link PolicyDecision#DENY} (fail closed).
  *
  * <p>Phase 5 done-when behaviour: rollback runs automatically in DEV and
- * needs a human approver's click in PROD; services never remediate PROD.
+ * needs a human approver's click in PROD; service accounts never remediate
+ * PROD.
  */
 public final class DecisionMatrix {
 
@@ -29,28 +33,53 @@ public final class DecisionMatrix {
     }
 
     /**
-     * Standard production matrix. Order matters: the most specific rows come
-     * first so a caller can never match a broader rule by accident.
+     * The standard production table, spelled out row by row. Every
+     * {@code action} × {@code environment} × {@code caller} combination has
+     * exactly one row, so the table is complete and the tests can drive the
+     * matrix straight from it.
+     */
+    public static List<MatrixRow> standardTable() {
+        return List.of(
+                // ROLLBACK — remediating a running system
+                row(PolicyAction.ROLLBACK, Env.DEV, CallerKind.SERVICE, PolicyDecision.DENY),
+                row(PolicyAction.ROLLBACK, Env.DEV, CallerKind.HUMAN, PolicyDecision.ALLOW),
+                row(PolicyAction.ROLLBACK, Env.DEV, CallerKind.HUMAN_APPROVER, PolicyDecision.ALLOW),
+                row(PolicyAction.ROLLBACK, Env.PROD, CallerKind.SERVICE, PolicyDecision.DENY),
+                row(PolicyAction.ROLLBACK, Env.PROD, CallerKind.HUMAN, PolicyDecision.DENY),
+                row(PolicyAction.ROLLBACK, Env.PROD, CallerKind.HUMAN_APPROVER, PolicyDecision.REQUIRE_APPROVAL),
+
+                // RESTART — same shape as rollback
+                row(PolicyAction.RESTART, Env.DEV, CallerKind.SERVICE, PolicyDecision.DENY),
+                row(PolicyAction.RESTART, Env.DEV, CallerKind.HUMAN, PolicyDecision.ALLOW),
+                row(PolicyAction.RESTART, Env.DEV, CallerKind.HUMAN_APPROVER, PolicyDecision.ALLOW),
+                row(PolicyAction.RESTART, Env.PROD, CallerKind.SERVICE, PolicyDecision.DENY),
+                row(PolicyAction.RESTART, Env.PROD, CallerKind.HUMAN, PolicyDecision.DENY),
+                row(PolicyAction.RESTART, Env.PROD, CallerKind.HUMAN_APPROVER, PolicyDecision.REQUIRE_APPROVAL)
+        );
+    }
+
+    private static MatrixRow row(
+            PolicyAction action, Env environment, CallerKind caller, PolicyDecision decision) {
+        return new MatrixRow(action, environment, caller, decision);
+    }
+
+    /**
+     * The standard production matrix, built from {@link #standardTable()}.
      */
     public static DecisionMatrix standard() {
-        Predicate<PolicySubject> human =
-                s -> !s.service();
-        Predicate<PolicySubject> humanWithoutApprover =
-                s -> !s.service() && !s.hasRole(APPROVER_ROLE);
-        Predicate<PolicySubject> humanApprover =
-                s -> !s.service() && s.hasRole(APPROVER_ROLE);
+        return from(standardTable());
+    }
 
-        List<Rule> rules = List.of(
-                new Rule(PolicyAction.ROLLBACK, Env.PROD, PolicySubject::service, PolicyDecision.DENY),
-                new Rule(PolicyAction.ROLLBACK, Env.PROD, humanWithoutApprover, PolicyDecision.DENY),
-                new Rule(PolicyAction.ROLLBACK, Env.PROD, humanApprover, PolicyDecision.REQUIRE_APPROVAL),
-                new Rule(PolicyAction.ROLLBACK, Env.DEV, human, PolicyDecision.ALLOW),
-
-                new Rule(PolicyAction.RESTART, Env.PROD, PolicySubject::service, PolicyDecision.DENY),
-                new Rule(PolicyAction.RESTART, Env.PROD, humanWithoutApprover, PolicyDecision.DENY),
-                new Rule(PolicyAction.RESTART, Env.PROD, humanApprover, PolicyDecision.REQUIRE_APPROVAL),
-                new Rule(PolicyAction.RESTART, Env.DEV, human, PolicyDecision.ALLOW)
-        );
+    /**
+     * Builds a matrix from a declarative table. Rows are converted to the
+     * predicate rules in table order; the caller-kinds partition every
+     * subject, so each (action, env, caller) touches exactly one row.
+     */
+    public static DecisionMatrix from(List<MatrixRow> table) {
+        List<Rule> rules = new ArrayList<>();
+        for (MatrixRow row : table) {
+            rules.add(new Rule(row.action(), row.environment(), row.caller()::matches, row.decision()));
+        }
         return new DecisionMatrix(rules);
     }
 
