@@ -32,10 +32,13 @@ public class IncidentService {
 
     private final IncidentRepository repository;
     private final InvestigationClient investigationClient;
+    private final PolicyClient policyClient;
 
-    public IncidentService(IncidentRepository repository, InvestigationClient investigationClient) {
+    public IncidentService(IncidentRepository repository, InvestigationClient investigationClient,
+                           PolicyClient policyClient) {
         this.repository = repository;
         this.investigationClient = investigationClient;
+        this.policyClient = policyClient;
     }
 
     public List<Map<String, Object>> list(String status) {
@@ -79,6 +82,63 @@ public class IncidentService {
         }
     }
 
+    /**
+     * Phase 5 Unit 4: the policy gate + approval transition. A remediation may
+     * only be requested once a hypothesis exists; the acting subject is sent to
+     * the policy service, whose decision drives the incident:
+     *
+     * <pre>
+     *   ALLOW            -> AUTO_APPROVED (remediation may start)
+     *   REQUIRE_APPROVAL -> AWAITING_APPROVAL (a human approver must click approve)
+     *   DENY             -> FAILED (remediation rejected; human decides next)
+     * </pre>
+     *
+     * If the policy service cannot be reached the incident stays HYPOTHESIS_READY
+     * (eligible) and never transitions into a policy-derived state.
+     */
+    @Transactional
+    public Incident requestRemediation(String incidentId, OperatorActor subject) {
+        Incident incident = repository.findByIncidentId(incidentId)
+                .orElseThrow(() -> new IncidentNotFoundException("Incident not found: " + incidentId));
+        if (!IncidentStatus.HYPOTHESIS_READY.name().equals(incident.getStatus())) {
+            throw new RemediationNotAllowedException(
+                    "Incident " + incidentId + " is " + incident.getStatus()
+                            + "; only HYPOTHESIS_READY incidents can request remediation");
+        }
+        PolicyEvaluation evaluation = policyClient.evaluate(
+                incidentId, PolicyClient.ACTION_ROLLBACK, incident.getEnv(), subject);
+        incident.setPolicyDecision(evaluation.decision());
+        incident.setRequestedAt(Instant.now());
+        switch (evaluation.decision()) {
+            case "ALLOW" -> {
+                incident.setStatus(IncidentStatus.AUTO_APPROVED.name());
+                incident.setApprovedAt(Instant.now());
+                incident.setApprovedBy(subject.name());
+            }
+            case "REQUIRE_APPROVAL" -> incident.setStatus(IncidentStatus.AWAITING_APPROVAL.name());
+            default -> incident.setStatus(IncidentStatus.FAILED.name());
+        }
+        incident.markUpdated();
+        return repository.save(incident);
+    }
+
+    /** Grants an AWAITING_APPROVAL incident, moving it to AUTO_APPROVED. */
+    @Transactional
+    public Incident approve(String incidentId, OperatorActor subject) {
+        Incident incident = repository.findByIncidentId(incidentId)
+                .orElseThrow(() -> new IncidentNotFoundException("Incident not found: " + incidentId));
+        if (!IncidentStatus.AWAITING_APPROVAL.name().equals(incident.getStatus())) {
+            throw new ApprovalNotAllowedException(
+                    "Incident " + incidentId + " is " + incident.getStatus()
+                            + "; only AWAITING_APPROVAL incidents can be approved");
+        }
+        incident.setStatus(IncidentStatus.AUTO_APPROVED.name());
+        incident.setApprovedAt(Instant.now());
+        incident.setApprovedBy(subject.name());
+        incident.markUpdated();
+        return repository.save(incident);
+    }
+
     public Map<String, Object> toSummary(Incident i) {
         Map<String, Object> m = new HashMap<>();
         m.put("incidentId", i.getIncidentId());
@@ -95,6 +155,10 @@ public class IncidentService {
         m.put("detectedAt", i.getDetectedAt() != null ? i.getDetectedAt().toString() : null);
         m.put("resolvedAt", i.getResolvedAt() != null ? i.getResolvedAt().toString() : null);
         m.put("investigatedAt", i.getInvestigatedAt() != null ? i.getInvestigatedAt().toString() : null);
+        m.put("policyDecision", i.getPolicyDecision());
+        m.put("requestedAt", i.getRequestedAt() != null ? i.getRequestedAt().toString() : null);
+        m.put("approvedAt", i.getApprovedAt() != null ? i.getApprovedAt().toString() : null);
+        m.put("approvedBy", i.getApprovedBy());
         m.put("metadata", safeJson(i.getMetadata()));
         m.put("hypothesis", safeJson(i.getHypothesis()));
         return m;

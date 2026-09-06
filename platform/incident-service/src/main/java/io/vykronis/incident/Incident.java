@@ -1,6 +1,9 @@
 package io.vykronis.incident;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.Instant;
 
 /**
@@ -62,15 +65,33 @@ public class Incident {
     private String traceId;
 
     @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String metadata;
 
     /** The investigation hypothesis (schema-validated by the orchestrator), when produced. */
     @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String hypothesis;
 
     /** When the last investigation produced a hypothesis. */
     @Column(name = "investigated_at")
     private Instant investigatedAt;
+
+    /** Policy decision that gated remediation: ALLOW / DENY / REQUIRE_APPROVAL. */
+    @Column(name = "policy_decision")
+    private String policyDecision;
+
+    /** When remediation was requested (the request that produced the decision). */
+    @Column(name = "requested_at")
+    private Instant requestedAt;
+
+    /** When an awaiting approval was granted (null until then). */
+    @Column(name = "approved_at")
+    private Instant approvedAt;
+
+    /** Subject that approved the remediation. */
+    @Column(name = "approved_by")
+    private String approvedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -224,6 +245,38 @@ public class Incident {
 
     public void setInvestigatedAt(Instant investigatedAt) {
         this.investigatedAt = investigatedAt;
+    }
+
+    public String getPolicyDecision() {
+        return policyDecision;
+    }
+
+    public void setPolicyDecision(String policyDecision) {
+        this.policyDecision = policyDecision;
+    }
+
+    public Instant getRequestedAt() {
+        return requestedAt;
+    }
+
+    public void setRequestedAt(Instant requestedAt) {
+        this.requestedAt = requestedAt;
+    }
+
+    public Instant getApprovedAt() {
+        return approvedAt;
+    }
+
+    public void setApprovedAt(Instant approvedAt) {
+        this.approvedAt = approvedAt;
+    }
+
+    public String getApprovedBy() {
+        return approvedBy;
+    }
+
+    public void setApprovedBy(String approvedBy) {
+        this.approvedBy = approvedBy;
     }
 
     public Instant getCreatedAt() {

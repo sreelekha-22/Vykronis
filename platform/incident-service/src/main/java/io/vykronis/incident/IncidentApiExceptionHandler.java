@@ -25,4 +25,22 @@ public class IncidentApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiError.of(409, "INVESTIGATION_NOT_ALLOWED", ex.getMessage()));
     }
+
+    @ExceptionHandler(RemediationNotAllowedException.class)
+    public ResponseEntity<ApiError> onRemediationNotAllowed(RemediationNotAllowedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiError.of(409, "REMEDIATION_NOT_ALLOWED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ApprovalNotAllowedException.class)
+    public ResponseEntity<ApiError> onApprovalNotAllowed(ApprovalNotAllowedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiError.of(409, "APPROVAL_NOT_ALLOWED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(PolicyUnavailableException.class)
+    public ResponseEntity<ApiError> onPolicyUnavailable(PolicyUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiError.of(503, "POLICY_UNAVAILABLE", ex.getMessage()));
+    }
 }

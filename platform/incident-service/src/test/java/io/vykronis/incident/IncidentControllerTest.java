@@ -29,8 +29,11 @@ class IncidentControllerTest {
     @Mock
     private InvestigationClient investigationClient;
 
+    @Mock
+    private PolicyClient policyClient;
+
     private MockMvc mockMvc() {
-        IncidentService service = new IncidentService(repository, investigationClient);
+        IncidentService service = new IncidentService(repository, investigationClient, policyClient);
         return MockMvcBuilders.standaloneSetup(new IncidentController(service))
                 .setControllerAdvice(new IncidentApiExceptionHandler())
                 .build();
@@ -132,5 +135,84 @@ class IncidentControllerTest {
 
         mockMvc().perform(post("/api/incidents/nope/investigate"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void remediationRequestAwaitsApprovalWhenPolicyRequiresIt() throws Exception {
+        Incident incident = incident("payment-service", "HYPOTHESIS_READY");
+        when(repository.findByIncidentId("inc-payment-service")).thenReturn(Optional.of(incident));
+        when(policyClient.evaluate("inc-payment-service", "ROLLBACK", "PROD",
+                OperatorActor.user("ops", "vykronis-approver")))
+                .thenReturn(new PolicyEvaluation("REQUIRE_APPROVAL", "prod needs an approver"));
+        when(repository.save(incident)).thenReturn(incident);
+
+        String body = mockMvc().perform(post("/api/incidents/inc-payment-service/remediation")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"subject\":{\"name\":\"ops\",\"roles\":[\"vykronis-approver\"],\"service\":false}}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        com.fasterxml.jackson.databind.JsonNode node = io.vykronis.common.json.Json.mapper().readTree(body);
+        assertThat(node.path("status").asText()).isEqualTo("AWAITING_APPROVAL");
+        assertThat(node.path("policyDecision").asText()).isEqualTo("REQUIRE_APPROVAL");
+    }
+
+    @Test
+    void approvingAnAwaitingIncidentAutoApprovesIt() throws Exception {
+        Incident incident = incident("payment-service", "AWAITING_APPROVAL");
+        when(repository.findByIncidentId("inc-payment-service")).thenReturn(Optional.of(incident));
+        when(repository.save(incident)).thenReturn(incident);
+
+        String body = mockMvc().perform(post("/api/incidents/inc-payment-service/approve")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"subject\":{\"name\":\"ops\",\"roles\":[\"vykronis-approver\"],\"service\":false}}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        com.fasterxml.jackson.databind.JsonNode node = io.vykronis.common.json.Json.mapper().readTree(body);
+        assertThat(node.path("status").asText()).isEqualTo("AUTO_APPROVED");
+        assertThat(node.path("approvedBy").asText()).isEqualTo("ops");
+    }
+
+    @Test
+    void remediationConflictWhenIncidentHasNoHypothesis() throws Exception {
+        Incident incident = incident("payment-service", "OPEN");
+        when(repository.findByIncidentId("inc-payment-service")).thenReturn(Optional.of(incident));
+
+        mockMvc().perform(post("/api/incidents/inc-payment-service/remediation")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isConflict());
+
+        org.mockito.Mockito.verify(policyClient, org.mockito.Mockito.never())
+                .evaluate(org.mockito.ArgumentMatchers.anyString(),
+                        org.mockito.ArgumentMatchers.anyString(),
+                        org.mockito.ArgumentMatchers.anyString(),
+                        org.mockito.ArgumentMatchers.any(OperatorActor.class));
+    }
+
+    @Test
+    void approvalConflictWhenIncidentIsNotAwaitingApproval() throws Exception {
+        Incident incident = incident("payment-service", "AUTO_APPROVED");
+        when(repository.findByIncidentId("inc-payment-service")).thenReturn(Optional.of(incident));
+
+        mockMvc().perform(post("/api/incidents/inc-payment-service/approve")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void remediationSurfacesPolicyOutageAsServiceUnavailable() throws Exception {
+        Incident incident = incident("payment-service", "HYPOTHESIS_READY");
+        when(repository.findByIncidentId("inc-payment-service")).thenReturn(Optional.of(incident));
+        when(policyClient.evaluate("inc-payment-service", "ROLLBACK", "PROD",
+                OperatorActor.user("ops", "vykronis-approver")))
+                .thenThrow(new PolicyUnavailableException("policy down"));
+
+        mockMvc().perform(post("/api/incidents/inc-payment-service/remediation")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"subject\":{\"name\":\"ops\",\"roles\":[\"vykronis-approver\"],\"service\":false}}"))
+                .andExpect(status().isServiceUnavailable());
     }
 }

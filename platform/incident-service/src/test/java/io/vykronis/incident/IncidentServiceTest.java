@@ -30,6 +30,9 @@ class IncidentServiceTest {
     @Mock
     private InvestigationClient investigationClient;
 
+    @Mock
+    private PolicyClient policyClient;
+
     @InjectMocks
     private IncidentService service;
 
@@ -108,5 +111,136 @@ class IncidentServiceTest {
 
         assertThatThrownBy(() -> service.investigate("inc-1"))
                 .isInstanceOf(InvestigationNotAllowedException.class);
+    }
+
+    private Incident hypothesisReady(String env) {
+        Incident incident = new Incident(
+                "inc-1", "correlation-engine", "payment-service", env, "HIGH",
+                IncidentStatus.HYPOTHESIS_READY.name(), "High error rate", "desc",
+                55.0, 42,
+                Instant.parse("2026-09-03T10:00:00Z"),
+                Instant.parse("2026-09-03T10:01:00Z"),
+                null, null);
+        incident.setHypothesis(hypothesisJson());
+        return incident;
+    }
+
+    private static OperatorActor approver() {
+        return OperatorActor.user("ops", "vykronis-approver");
+    }
+
+    private static OperatorActor human() {
+        return OperatorActor.user("alice");
+    }
+
+    @Test
+    void prodRemediationAwaitsApprovalWhenPolicyRequiresIt() {
+        Incident incident = hypothesisReady("PROD");
+        when(repository.findByIncidentId("inc-1")).thenReturn(Optional.of(incident));
+        when(policyClient.evaluate("inc-1", "ROLLBACK", "PROD", approver()))
+                .thenReturn(new PolicyEvaluation("REQUIRE_APPROVAL", "prod needs an approver"));
+        when(repository.save(incident)).thenReturn(incident);
+
+        Incident result = service.requestRemediation("inc-1", approver());
+
+        assertThat(result.getStatus()).isEqualTo(IncidentStatus.AWAITING_APPROVAL.name());
+        assertThat(result.getPolicyDecision()).isEqualTo("REQUIRE_APPROVAL");
+        assertThat(result.getRequestedAt()).isNotNull();
+        assertThat(result.getApprovedAt()).isNull();
+    }
+
+    @Test
+    void prodRemediationAutoApprovesWhenPolicyAllows() {
+        Incident incident = hypothesisReady("PROD");
+        when(repository.findByIncidentId("inc-1")).thenReturn(Optional.of(incident));
+        when(policyClient.evaluate("inc-1", "ROLLBACK", "PROD", approver()))
+                .thenReturn(new PolicyEvaluation("ALLOW", "explicit allow"));
+        when(repository.save(incident)).thenReturn(incident);
+
+        Incident result = service.requestRemediation("inc-1", approver());
+
+        assertThat(result.getStatus()).isEqualTo(IncidentStatus.AUTO_APPROVED.name());
+        assertThat(result.getPolicyDecision()).isEqualTo("ALLOW");
+        assertThat(result.getApprovedAt()).isNotNull();
+        assertThat(result.getApprovedBy()).isEqualTo("ops");
+    }
+
+    @Test
+    void devRemediationAutoApprovesWithoutAnApprover() {
+        Incident incident = hypothesisReady("DEV");
+        when(repository.findByIncidentId("inc-1")).thenReturn(Optional.of(incident));
+        when(policyClient.evaluate("inc-1", "ROLLBACK", "DEV", human()))
+                .thenReturn(new PolicyEvaluation("ALLOW", "dev rollbacks auto"));
+        when(repository.save(incident)).thenReturn(incident);
+
+        Incident result = service.requestRemediation("inc-1", human());
+
+        assertThat(result.getStatus()).isEqualTo(IncidentStatus.AUTO_APPROVED.name());
+        assertThat(result.getApprovedBy()).isEqualTo("alice");
+    }
+
+    @Test
+    void deniedRemediationFailsTheIncident() {
+        Incident incident = hypothesisReady("PROD");
+        when(repository.findByIncidentId("inc-1")).thenReturn(Optional.of(incident));
+        when(policyClient.evaluate("inc-1", "ROLLBACK", "PROD", human()))
+                .thenReturn(new PolicyEvaluation("DENY", "no approver"));
+        when(repository.save(incident)).thenReturn(incident);
+
+        Incident result = service.requestRemediation("inc-1", human());
+
+        assertThat(result.getStatus()).isEqualTo(IncidentStatus.FAILED.name());
+        assertThat(result.getPolicyDecision()).isEqualTo("DENY");
+        assertThat(result.getApprovedAt()).isNull();
+    }
+
+    @Test
+    void remediationRequiresAHypothesis() {
+        Incident incident = openIncident();
+        incident.setStatus(IncidentStatus.OPEN.name());
+        when(repository.findByIncidentId("inc-1")).thenReturn(Optional.of(incident));
+
+        assertThatThrownBy(() -> service.requestRemediation("inc-1", approver()))
+                .isInstanceOf(RemediationNotAllowedException.class);
+        org.mockito.Mockito.verifyNoInteractions(policyClient);
+    }
+
+    @Test
+    void leavesIncidentEligibleWhenPolicyIsUnavailable() {
+        Incident incident = hypothesisReady("PROD");
+        when(repository.findByIncidentId("inc-1")).thenReturn(Optional.of(incident));
+        when(policyClient.evaluate("inc-1", "ROLLBACK", "PROD", approver()))
+                .thenThrow(new PolicyUnavailableException("policy down"));
+
+        assertThatThrownBy(() -> service.requestRemediation("inc-1", approver()))
+                .isInstanceOf(PolicyUnavailableException.class);
+
+        assertThat(incident.getStatus()).isEqualTo(IncidentStatus.HYPOTHESIS_READY.name());
+        assertThat(incident.getPolicyDecision()).isNull();
+    }
+
+    @Test
+    void approvalMovesAwaitingIncidentToAutoApproved() {
+        Incident incident = hypothesisReady("PROD");
+        incident.setStatus(IncidentStatus.AWAITING_APPROVAL.name());
+        when(repository.findByIncidentId("inc-1")).thenReturn(Optional.of(incident));
+        when(repository.save(incident)).thenReturn(incident);
+
+        Incident result = service.approve("inc-1", approver());
+
+        assertThat(result.getStatus()).isEqualTo(IncidentStatus.AUTO_APPROVED.name());
+        assertThat(result.getApprovedAt()).isNotNull();
+        assertThat(result.getApprovedBy()).isEqualTo("ops");
+    }
+
+    @Test
+    void approvalRejectsAnIncidentThatIsNotAwaiting() {
+        Incident incident = hypothesisReady("PROD");
+        incident.setStatus(IncidentStatus.AUTO_APPROVED.name());
+        when(repository.findByIncidentId("inc-1")).thenReturn(Optional.of(incident));
+
+        assertThatThrownBy(() -> service.approve("inc-1", approver()))
+                .isInstanceOf(ApprovalNotAllowedException.class);
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).save(incident);
     }
 }

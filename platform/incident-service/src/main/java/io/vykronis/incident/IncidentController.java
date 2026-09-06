@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,5 +45,23 @@ public class IncidentController {
     @PostMapping("/{incidentId}/investigate")
     public ResponseEntity<?> investigate(@PathVariable String incidentId) {
         return ResponseEntity.ok(service.toSummary(service.investigate(incidentId)));
+    }
+
+    @PostMapping("/{incidentId}/remediation")
+    public ResponseEntity<?> requestRemediation(@PathVariable String incidentId,
+                                                @RequestBody OperatorRequest request) {
+        OperatorActor actor = request.subject() != null
+                ? request.subject()
+                : OperatorActor.user("anonymous");
+        return ResponseEntity.ok(service.toSummary(service.requestRemediation(incidentId, actor)));
+    }
+
+    @PostMapping("/{incidentId}/approve")
+    public ResponseEntity<?> approve(@PathVariable String incidentId,
+                                     @RequestBody OperatorRequest request) {
+        OperatorActor actor = request.subject() != null
+                ? request.subject()
+                : OperatorActor.user("anonymous");
+        return ResponseEntity.ok(service.toSummary(service.approve(incidentId, actor)));
     }
 }

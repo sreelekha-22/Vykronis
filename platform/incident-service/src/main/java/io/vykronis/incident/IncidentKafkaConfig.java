@@ -46,7 +46,7 @@ public class IncidentKafkaConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, IncidentCandidate> incidentKafkaListenerContainerFactory(
+    public ConcurrentKafkaListenerContainerFactory<String, IncidentCandidate> kafkaListenerContainerFactory(
             ConsumerFactory<String, IncidentCandidate> candidateConsumerFactory) {
         ConcurrentKafkaListenerContainerFactory<String, IncidentCandidate> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
