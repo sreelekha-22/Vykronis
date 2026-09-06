@@ -1,0 +1,73 @@
+{{/* Postgres as a single-replica StatefulSet with a PVC template. */}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    {{- include "vykronis.labels" . | nindent 4 }}
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "vykronis.selectorLabels" (dict "Chart" .Chart "Release" .Release "service" "postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vykronis.selectorLabels" (dict "Chart" .Chart "Release" .Release "service" "postgres") | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image | quote }}
+          ports:
+            - name: postgres
+              containerPort: {{ .Values.postgres.port }}
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: vykronis
+            - name: POSTGRES_USER
+              value: {{ .Values.vykronis.db.username | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.vykronis.db.password | quote }}
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "vykronis"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "vykronis"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    {{- include "vykronis.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "vykronis.selectorLabels" (dict "Chart" .Chart "Release" .Release "service" "postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: {{ .Values.postgres.port }}
+      targetPort: postgres
+      protocol: TCP

@@ -1,0 +1,67 @@
+# Default values for the vykronis chart (kind/k3d demo).
+# Every platform service gets a Deployment + ClusterIP Service with
+# liveness/readiness probes and resource requests/limits.
+
+replicaCount: 1
+
+image:
+  # Override per service with --set services[0].image=... or via values.services below.
+  repository: vykronis
+  tag: local
+  pullPolicy: IfNotPresent
+
+# The 9 platform services (name + container port must match application.properties).
+services:
+  - name: api-gateway
+    port: 8080
+  - name: ingestion-service
+    port: 8081
+  - name: event-service
+    port: 8082
+  - name: correlation-engine
+    port: 8083
+  - name: incident-service
+    port: 8084
+  - name: demo-service
+    port: 8085
+  - name: agent-orchestrator
+    port: 8085
+  - name: policy-service
+    port: 8086
+  - name: remediation-service
+    port: 8087
+
+probes:
+  livenessPath: /actuator/health/liveness
+  readinessPath: /actuator/health/readiness
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+vykronis:
+  remediation:
+    target: kubernetes
+    kubernetes:
+      namespace: vykronis
+  kafka:
+    bootstrap: kafka:9092
+  db:
+    url: jdbc:postgresql://postgres:5432/vykronis
+    username: vykronis
+    password: vykronis
+
+postgres:
+  image: postgres:16
+  port: 5432
+  storage: 1Gi
+
+kafka:
+  image: apache/kafka:3.8.0
+  port: 9092

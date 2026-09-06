@@ -1,0 +1,53 @@
+{{/* One Deployment per platform service: probes + resources are mandatory. */}}
+{{- range .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "vykronis.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $.Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "vykronis.selectorLabels" (dict "Chart" $.Chart "Release" $.Release "service" .name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vykronis.selectorLabels" (dict "Chart" $.Chart "Release" $.Release "service" .name) | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .name }}
+          image: "{{ $.Values.image.repository }}/{{ .name }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .port }}
+              protocol: TCP
+          env:
+            - name: VYKRONIS_REMEDIATION_TARGET
+              value: {{ $.Values.vykronis.remediation.target | quote }}
+            - name: VYKRONIS_KAFKA_BOOTSTRAP
+              value: {{ $.Values.vykronis.kafka.bootstrap | quote }}
+            - name: VYKRONIS_DB_URL
+              value: {{ $.Values.vykronis.db.url | quote }}
+            - name: VYKRONIS_DB_USER
+              value: {{ $.Values.vykronis.db.username | quote }}
+            - name: VYKRONIS_DB_PASSWORD
+              value: {{ $.Values.vykronis.db.password | quote }}
+          livenessProbe:
+            httpGet:
+              path: {{ $.Values.probes.livenessPath }}
+              port: http
+            initialDelaySeconds: {{ $.Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ $.Values.probes.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ $.Values.probes.readinessPath }}
+              port: http
+            initialDelaySeconds: {{ $.Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ $.Values.probes.periodSeconds }}
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+{{- end }}
