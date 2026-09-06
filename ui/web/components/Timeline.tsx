@@ -55,6 +55,9 @@ export function Timeline({ incident, from, to, items }: TimelineProps) {
           Incident <strong>{incident.incidentId}</strong> — {incident.serviceId} ({incident.severity},{' '}
           {incident.status})
         </p>
+        <p data-testid="incident-status">
+          Status: <strong>{incident.status}</strong>
+        </p>
         <p data-testid="incident-window">
           Window: {formatTimestamp(from)} → {formatTimestamp(to)}
         </p>

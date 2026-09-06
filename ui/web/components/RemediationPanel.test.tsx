@@ -28,9 +28,10 @@ describe('RemediationPanel', () => {
   it('renders an Approve action on a prod incident awaiting approval and posts to the approve endpoint', async () => {
     const next: IncidentSummary = {
       ...base,
-      status: 'AUTO_APPROVED',
+      status: 'REMEDIATING',
       approvedBy: 'ops',
       approvedAt: '2026-09-06T10:00:00Z',
+      remediationCommandId: 'cmd-1',
     };
     const fetchMock = vi.fn().mockResolvedValue(ok(next));
     vi.stubGlobal('fetch', fetchMock);
@@ -43,7 +44,7 @@ describe('RemediationPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Approve$/ }));
 
     await waitFor(() =>
-      expect(screen.getByTestId('remediation-status')).toHaveTextContent('Remediation auto-approved by ops'),
+      expect(screen.getByTestId('remediation-status')).toHaveTextContent('Remediation in progress'),
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -52,6 +53,41 @@ describe('RemediationPanel', () => {
     expect(String(url)).toContain('/api/incidents/inc-2/approve');
     const body = JSON.parse(String(init?.body));
     expect(body.subject.name).toBe('ops');
+  });
+
+  it('reports the verifying window while the incident is VERIFYING', () => {
+    render(
+      <RemediationPanel
+        incident={{
+          ...base,
+          status: 'VERIFYING',
+          remediationCommandId: 'cmd-1',
+          remediationOutcome: 'COMPLETED',
+          remediationCompletedAt: '2026-09-06T10:05:00Z',
+        }}
+        operator={operator}
+      />,
+    );
+
+    expect(screen.getByTestId('remediation-status')).toHaveTextContent('verifying the service stays healthy');
+  });
+
+  it('reports a verified, resolved incident through RESOLVED', () => {
+    render(
+      <RemediationPanel
+        incident={{
+          ...base,
+          status: 'RESOLVED',
+          remediationCommandId: 'cmd-1',
+          remediationOutcome: 'COMPLETED',
+          remediationCompletedAt: '2026-09-06T10:05:00Z',
+          resolvedAt: '2026-09-06T10:06:00Z',
+        }}
+        operator={operator}
+      />,
+    );
+
+    expect(screen.getByTestId('remediation-status')).toHaveTextContent('Resolved — remediation verified (COMPLETED)');
   });
 
   it('does not render an Approve action on a non-prod auto-approved incident', () => {

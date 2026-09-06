@@ -51,6 +51,10 @@ export interface IncidentSummary {
   requestedAt?: string;
   approvedAt?: string;
   approvedBy?: string;
+  remediationCommandId?: string;
+  remediationOutcome?: string;
+  remediationCompletedAt?: string;
+  resolvedAt?: string;
 }
 
 export interface EvidenceRef {

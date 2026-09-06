@@ -46,6 +46,25 @@ const jfr: EvidenceItem = {
 };
 
 describe('Timeline', () => {
+  it('renders every incident state through RESOLVED', () => {
+    const statuses = [
+      'OPEN',
+      'INVESTIGATING',
+      'HYPOTHESIS_READY',
+      'AWAITING_APPROVAL',
+      'REMEDIATING',
+      'VERIFYING',
+      'RESOLVED',
+    ];
+    for (const status of statuses) {
+      const { unmount } = render(
+        <Timeline incident={{ ...incident, status }} from="2026-09-03T10:00:00Z" to="2026-09-03T11:00:00Z" items={[]} />,
+      );
+      expect(screen.getByTestId('incident-status')).toHaveTextContent(`Status: ${status}`);
+      unmount();
+    }
+  });
+
   it('renders trace, log and JFR evidence refs on the timeline', () => {
     render(
       <Timeline incident={incident} from="2026-09-03T10:00:00Z" to="2026-09-03T11:00:00Z" items={[jfr, trace, log]} />,

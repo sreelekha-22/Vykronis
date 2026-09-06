@@ -74,6 +74,36 @@ export function RemediationPanel({ incident, operator }: RemediationPanelProps) 
         </button>
       ) : null}
 
+      {summary.status === 'REMEDIATING' ? (
+        <p className="remediation-note" data-testid="remediation-status">
+          Remediation in progress — command issued, executor running
+        </p>
+      ) : null}
+
+      {summary.status === 'VERIFYING' ? (
+        <p className="remediation-note" data-testid="remediation-status">
+          Remediation completed — verifying the service stays healthy
+        </p>
+      ) : null}
+
+      {summary.status === 'RESOLVED' ? (
+        <p className="remediation-note" data-testid="remediation-status">
+          {summary.remediationOutcome
+            ? `Resolved — remediation verified (${summary.remediationOutcome})`
+            : 'Resolved'}
+        </p>
+      ) : null}
+
+      {summary.status === 'FAILED' ? (
+        <p className="remediation-note" data-testid="remediation-status">
+          {summary.remediationOutcome === 'FAILED'
+            ? 'Remediation executor failed'
+            : summary.policyDecision === 'DENY'
+              ? 'Policy denied remediation'
+              : 'Remediation did not succeed'}
+        </p>
+      ) : null}
+
       {approved ? (
         <p className="remediation-note" data-testid="remediation-status">
           {`Remediation auto-approved${summary.approvedBy ? ` by ${summary.approvedBy}` : ''}`}

@@ -45,6 +45,10 @@ interface IncidentDto {
   requestedAt?: string;
   approvedAt?: string;
   approvedBy?: string;
+  remediationCommandId?: string;
+  remediationOutcome?: string;
+  remediationCompletedAt?: string;
+  resolvedAt?: string;
   hypothesis?: unknown;
 }
 
@@ -98,6 +102,10 @@ function toIncident(dto: IncidentDto): IncidentSummary {
     requestedAt: dto.requestedAt,
     approvedAt: dto.approvedAt,
     approvedBy: dto.approvedBy,
+    remediationCommandId: dto.remediationCommandId,
+    remediationOutcome: dto.remediationOutcome,
+    remediationCompletedAt: dto.remediationCompletedAt,
+    resolvedAt: dto.resolvedAt,
     hypothesis: toHypothesis(dto.hypothesis),
   };
 }
