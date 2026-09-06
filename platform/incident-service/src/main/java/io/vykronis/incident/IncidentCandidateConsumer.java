@@ -22,9 +22,11 @@ import java.util.UUID;
 public class IncidentCandidateConsumer {
 
     private final IncidentRepository repository;
+    private final VerificationService verificationService;
 
-    public IncidentCandidateConsumer(IncidentRepository repository) {
+    public IncidentCandidateConsumer(IncidentRepository repository, VerificationService verificationService) {
         this.repository = repository;
+        this.verificationService = verificationService;
     }
 
     @KafkaListener(topics = "obs.alerts", groupId = "incident-service")
@@ -33,17 +35,30 @@ public class IncidentCandidateConsumer {
         if (candidate == null) {
             return;
         }
-        var existing = repository.findByServiceIdOrderByDetectedAtDesc(candidate.serviceId())
-                .stream()
+        var all = repository.findByServiceIdOrderByDetectedAtDesc(candidate.serviceId());
+        var existing = all.stream()
                 .filter(i -> i.getEnv().equals(candidate.env().name()))
                 .filter(i -> IncidentStatus.OPEN.name().equals(i.getStatus()))
                 .findFirst();
 
         if (existing.isPresent()) {
             update(existing.get(), candidate);
-        } else {
-            create(candidate);
+            return;
         }
+
+        // Phase 6 Unit 4: a candidate for a service that is mid-verification
+        // means the remediation did not hold — fail it and learn, rather than
+        // piling a duplicate incident on top of a VERIFYING one.
+        var verifying = all.stream()
+                .filter(i -> i.getEnv().equals(candidate.env().name()))
+                .filter(i -> IncidentStatus.VERIFYING.name().equals(i.getStatus()))
+                .findFirst();
+        if (verifying.isPresent()) {
+            verificationService.onReBreach(verifying.get());
+            return;
+        }
+
+        create(candidate);
     }
 
     private void create(IncidentCandidate c) {

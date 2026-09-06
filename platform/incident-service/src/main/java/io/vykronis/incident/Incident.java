@@ -105,6 +105,10 @@ public class Incident {
     @Column(name = "remediation_completed_at")
     private Instant remediationCompletedAt;
 
+    /** End of the verification window (VERIFYING resolves after this instant). */
+    @Column(name = "verify_deadline")
+    private Instant verifyDeadline;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -313,6 +317,14 @@ public class Incident {
 
     public void setRemediationCompletedAt(Instant remediationCompletedAt) {
         this.remediationCompletedAt = remediationCompletedAt;
+    }
+
+    public Instant getVerifyDeadline() {
+        return verifyDeadline;
+    }
+
+    public void setVerifyDeadline(Instant verifyDeadline) {
+        this.verifyDeadline = verifyDeadline;
     }
 
     public Instant getCreatedAt() {

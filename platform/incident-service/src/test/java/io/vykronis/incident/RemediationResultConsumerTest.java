@@ -4,7 +4,6 @@ import io.vykronis.contracts.model.RemediationOutcome;
 import io.vykronis.contracts.model.RemediationResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -29,8 +28,9 @@ class RemediationResultConsumerTest {
     @Mock
     private IncidentRepository repository;
 
-    @InjectMocks
-    private RemediationResultConsumer consumer;
+    private RemediationResultConsumer consumer() {
+        return new RemediationResultConsumer(repository, 60);
+    }
 
     private Incident remediating() {
         Incident incident = new Incident(
@@ -56,11 +56,13 @@ class RemediationResultConsumerTest {
         when(repository.findByIncidentId("inc-9")).thenReturn(Optional.of(incident));
         when(repository.save(incident)).thenReturn(incident);
 
-        consumer.onResult(result(RemediationOutcome.COMPLETED));
+        consumer().onResult(result(RemediationOutcome.COMPLETED));
 
         assertThat(incident.getStatus()).isEqualTo(IncidentStatus.VERIFYING.name());
         assertThat(incident.getRemediationOutcome()).isEqualTo("COMPLETED");
         assertThat(incident.getRemediationCompletedAt()).isNotNull();
+        Instant earliest = Instant.now().plusSeconds(50);
+        assertThat(incident.getVerifyDeadline()).isAfterOrEqualTo(earliest);
         verify(repository).save(incident);
     }
 
@@ -70,7 +72,7 @@ class RemediationResultConsumerTest {
         when(repository.findByIncidentId("inc-9")).thenReturn(Optional.of(incident));
         when(repository.save(incident)).thenReturn(incident);
 
-        consumer.onResult(result(RemediationOutcome.FAILED));
+        consumer().onResult(result(RemediationOutcome.FAILED));
 
         assertThat(incident.getStatus()).isEqualTo(IncidentStatus.FAILED.name());
         assertThat(incident.getRemediationOutcome()).isEqualTo("FAILED");
@@ -82,7 +84,7 @@ class RemediationResultConsumerTest {
         incident.setStatus(IncidentStatus.VERIFYING.name());
         when(repository.findByIncidentId("inc-9")).thenReturn(Optional.of(incident));
 
-        consumer.onResult(result(RemediationOutcome.FAILED));
+        consumer().onResult(result(RemediationOutcome.FAILED));
 
         assertThat(incident.getStatus()).isEqualTo(IncidentStatus.VERIFYING.name());
         verify(repository, never()).save(incident);
@@ -92,14 +94,14 @@ class RemediationResultConsumerTest {
     void unknownIncidentIsIgnored() {
         when(repository.findByIncidentId("inc-9")).thenReturn(Optional.empty());
 
-        consumer.onResult(result(RemediationOutcome.COMPLETED));
+        consumer().onResult(result(RemediationOutcome.COMPLETED));
 
         verify(repository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
     void nullResultIsIgnored() {
-        consumer.onResult(null);
+        consumer().onResult(null);
 
         verify(repository, never()).findByIncidentId(org.mockito.ArgumentMatchers.anyString());
     }

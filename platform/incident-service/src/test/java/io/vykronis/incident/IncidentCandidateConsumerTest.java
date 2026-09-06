@@ -26,6 +26,9 @@ class IncidentCandidateConsumerTest {
     @Mock
     private IncidentRepository repository;
 
+    @Mock
+    private VerificationService verificationService;
+
     @InjectMocks
     private IncidentCandidateConsumer consumer;
 
@@ -145,5 +148,20 @@ class IncidentCandidateConsumerTest {
         assertThat(saved.getStatus()).isEqualTo(IncidentStatus.OPEN.name());
         assertThat(saved.getErrorRate()).isNull();
         assertThat(saved.getErrorCount()).isNull();
+    }
+
+    @Test
+    void candidateWhileVerifyingFailsTheIncidentAndLearns() {
+        Incident verifying = new Incident();
+        verifying.setStatus(IncidentStatus.VERIFYING.name());
+        verifying.setEnv(Env.PROD.name());
+        when(repository.findByServiceIdOrderByDetectedAtDesc("payment-service"))
+                .thenReturn(List.of(verifying));
+
+        consumer.onCandidate(candidate());
+
+        verify(verificationService).onReBreach(verifying);
+        verify(repository, never()).save(any());
+        verifyNoMoreInteractions(repository);
     }
 }
