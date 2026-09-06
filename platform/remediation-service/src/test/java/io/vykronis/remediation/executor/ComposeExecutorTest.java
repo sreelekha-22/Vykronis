@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -116,5 +117,25 @@ class ComposeExecutorTest {
 
         assertThat(store.findByCommandId(commandId))
                 .hasValueSatisfying(record -> assertThat(record.outcome()).isEqualTo(RemediationOutcome.COMPLETED));
+    }
+
+    @Test
+    void replayingTheSameCommandIdIsANoOpThatNeverReRunsDocker() {
+        UUID commandId = UUID.randomUUID();
+        AtomicInteger runs = new AtomicInteger();
+        FakeRunner runner = new FakeRunner(new CommandOutcome(true, 0, "creating payment-service ... done"));
+        CommandRunner counting = argv -> {
+            runs.incrementAndGet();
+            return runner.run(argv);
+        };
+        ComposeExecutor executor = new ComposeExecutor(counting, store, options);
+
+        RemediationResult first = executor.execute(command(RemediationAction.ROLLBACK, commandId));
+        RemediationResult replay = executor.execute(command(RemediationAction.ROLLBACK, commandId));
+
+        assertThat(runs.get()).isEqualTo(1);
+        assertThat(replay.commandId()).isEqualTo(commandId);
+        assertThat(replay.outcome()).isEqualTo(first.outcome());
+        assertThat(replay.detail()).isEqualTo(first.detail());
     }
 }
