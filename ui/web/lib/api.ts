@@ -1,4 +1,4 @@
-import type { EvidenceItem, Hypothesis, IncidentSummary } from '@/lib/types';
+import type { EvidenceItem, Hypothesis, IncidentSummary, OperatorSubject } from '@/lib/types';
 
 const API_URL: string = process.env.VYKRONIS_API_URL ?? 'http://localhost:8080';
 
@@ -40,6 +40,11 @@ interface IncidentDto {
   windowStart?: string;
   windowEnd?: string;
   investigatedAt?: string;
+  env?: string;
+  policyDecision?: string;
+  requestedAt?: string;
+  approvedAt?: string;
+  approvedBy?: string;
   hypothesis?: unknown;
 }
 
@@ -88,6 +93,11 @@ function toIncident(dto: IncidentDto): IncidentSummary {
     title: dto.title,
     detectedAt: dto.detectedAt ?? new Date().toISOString(),
     investigatedAt: dto.investigatedAt,
+    env: dto.env,
+    policyDecision: dto.policyDecision,
+    requestedAt: dto.requestedAt,
+    approvedAt: dto.approvedAt,
+    approvedBy: dto.approvedBy,
     hypothesis: toHypothesis(dto.hypothesis),
   };
 }
@@ -135,4 +145,30 @@ export async function getEvidence(
 
 export async function investigateIncident(incidentId: string): Promise<Hypothesis> {
   return jsonRequest(`/api/incidents/${incidentId}/investigate`, { method: 'POST' }) as Promise<Hypothesis>;
+}
+
+export const DEMO_OPERATOR: OperatorSubject = { name: 'ops', roles: ['approver'], service: false };
+
+function operatorBody(subject: OperatorSubject | undefined): string {
+  return JSON.stringify({ subject: subject ?? null });
+}
+
+export async function requestRemediation(
+  incidentId: string,
+  subject?: OperatorSubject,
+): Promise<IncidentSummary> {
+  return jsonRequest(`/api/incidents/${incidentId}/remediation`, {
+    method: 'POST',
+    body: operatorBody(subject),
+  }) as Promise<IncidentSummary>;
+}
+
+export async function approveRemediation(
+  incidentId: string,
+  subject?: OperatorSubject,
+): Promise<IncidentSummary> {
+  return jsonRequest(`/api/incidents/${incidentId}/approve`, {
+    method: 'POST',
+    body: operatorBody(subject),
+  }) as Promise<IncidentSummary>;
 }

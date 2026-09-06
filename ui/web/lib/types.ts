@@ -31,6 +31,12 @@ export interface Hypothesis {
   evidence: HypothesisEvidence[];
 }
 
+export interface OperatorSubject {
+  name: string;
+  roles: string[];
+  service?: boolean;
+}
+
 export interface IncidentSummary {
   incidentId: string;
   serviceId: string;
@@ -40,6 +46,11 @@ export interface IncidentSummary {
   detectedAt: string;
   hypothesis?: Hypothesis;
   investigatedAt?: string;
+  env?: string;
+  policyDecision?: string;
+  requestedAt?: string;
+  approvedAt?: string;
+  approvedBy?: string;
 }
 
 export interface EvidenceRef {

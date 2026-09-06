@@ -1,6 +1,7 @@
 import { InvestigatePanel } from '@/components/InvestigatePanel';
+import { RemediationPanel } from '@/components/RemediationPanel';
 import { Timeline } from '@/components/Timeline';
-import { ApiError, getEvidence, getIncident } from '@/lib/api';
+import { ApiError, DEMO_OPERATOR, getEvidence, getIncident } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
   return (
     <main>
       <InvestigatePanel incident={incident} />
+      <RemediationPanel incident={incident} operator={DEMO_OPERATOR} />
       <Timeline incident={incident} from={from} to={to} items={items} />
     </main>
   );
