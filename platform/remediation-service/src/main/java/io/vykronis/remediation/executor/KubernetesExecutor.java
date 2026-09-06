@@ -14,23 +14,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The only component that talks to a docker daemon. Turns a policy-approved
- * {@link RemediationCommand} into a {@code docker compose} invocation and runs
- * it through the {@link CommandRunner} seam.
+ * Kubernetes counterpart to {@link ComposeExecutor}: turns a policy-approved
+ * {@link RemediationCommand} into a {@code kubectl rollout} call and runs it
+ * through the {@link CommandRunner} seam.
  *
- * <p>Idempotency: a command id already present in the
- * {@link RemediationRecordStore} is never executed again — the stored result is
- * returned so replays are no-ops (Phase 6 Unit 6 verifies this explicitly).</p>
+ * <p>The two executors are <em>command-equivalent</em>: for the same
+ * {@code (action, serviceId, commandId)} they return the same
+ * {@link RemediationOutcome} (COMPLETED on exit 0, FAILED otherwise) and
+ * the same idempotency-keyed record (Phase 7 Unit 2 verifies this).</p>
+ *
+ * <ul>
+ *   <li>ROLLBACK -> {@code kubectl rollout undo deployment/<svc> -n <ns>}</li>
+ *   <li>RESTART  -> {@code kubectl rollout restart deployment/<svc> -n <ns>}</li>
+ * </ul>
  */
 @Component
-@ConditionalOnProperty(name = "vykronis.remediation.target", havingValue = "compose", matchIfMissing = true)
-public class ComposeExecutor implements RemediationExecutor {
+@ConditionalOnProperty(name = "vykronis.remediation.target", havingValue = "kubernetes")
+public class KubernetesExecutor implements RemediationExecutor {
 
     private final CommandRunner runner;
     private final RemediationRecordStore store;
-    private final ComposeOptions options;
+    private final KubernetesOptions options;
 
-    public ComposeExecutor(CommandRunner runner, RemediationRecordStore store, ComposeOptions options) {
+    public KubernetesExecutor(CommandRunner runner, RemediationRecordStore store, KubernetesOptions options) {
         this.runner = runner;
         this.store = store;
         this.options = options;
@@ -53,27 +59,23 @@ public class ComposeExecutor implements RemediationExecutor {
     }
 
     /**
-     * Maps a {@link RemediationCommand} to the exact {@code docker compose}
-     * argv. ROLLBACK recreates the service container ({@code up -d --no-deps})
-     * which lifts it to the version pinned in the active compose overlay;
-     * RESTART recycles the running container in place.
+     * Maps a {@link RemediationCommand} to the exact {@code kubectl} argv.
+     * ROLLBACK undoes the current rollout (Kubernetes equivalent of the
+     * Compose "recreate to pinned version" step); RESTART recycles pods
+     * in place.
      */
     List<String> commandLine(RemediationCommand command) {
         List<String> argv = new ArrayList<>();
-        argv.add("docker");
-        argv.add("compose");
-        for (String file : options.composeFiles()) {
-            argv.add("-f");
-            argv.add(file);
-        }
+        argv.add(options.kubectlBinary());
+        argv.add("rollout");
         if (command.action() == RemediationAction.ROLLBACK) {
-            argv.add("up");
-            argv.add("-d");
-            argv.add("--no-deps");
+            argv.add("undo");
         } else {
             argv.add("restart");
         }
-        argv.add(command.serviceId());
+        argv.add("deployment/" + command.serviceId());
+        argv.add("-n");
+        argv.add(options.namespace());
         return argv;
     }
 
