@@ -93,6 +93,18 @@ public class Incident {
     @Column(name = "approved_by")
     private String approvedBy;
 
+    /** The remediation command issued for this incident (null until approved). */
+    @Column(name = "remediation_command_id", updatable = false)
+    private String remediationCommandId;
+
+    /** Executor outcome once the remediation ran: COMPLETED / FAILED. */
+    @Column(name = "remediation_outcome")
+    private String remediationOutcome;
+
+    /** When the executor finished the remediation. */
+    @Column(name = "remediation_completed_at")
+    private Instant remediationCompletedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -277,6 +289,30 @@ public class Incident {
 
     public void setApprovedBy(String approvedBy) {
         this.approvedBy = approvedBy;
+    }
+
+    public String getRemediationCommandId() {
+        return remediationCommandId;
+    }
+
+    public void setRemediationCommandId(String remediationCommandId) {
+        this.remediationCommandId = remediationCommandId;
+    }
+
+    public String getRemediationOutcome() {
+        return remediationOutcome;
+    }
+
+    public void setRemediationOutcome(String remediationOutcome) {
+        this.remediationOutcome = remediationOutcome;
+    }
+
+    public Instant getRemediationCompletedAt() {
+        return remediationCompletedAt;
+    }
+
+    public void setRemediationCompletedAt(Instant remediationCompletedAt) {
+        this.remediationCompletedAt = remediationCompletedAt;
     }
 
     public Instant getCreatedAt() {

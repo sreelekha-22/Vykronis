@@ -1,6 +1,11 @@
 package io.vykronis.incident;
 
 import io.vykronis.common.json.Json;
+import io.vykronis.contracts.Topics;
+import io.vykronis.contracts.model.Env;
+import io.vykronis.contracts.model.RemediationAction;
+import io.vykronis.contracts.model.RemediationCommand;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -33,12 +39,15 @@ public class IncidentService {
     private final IncidentRepository repository;
     private final InvestigationClient investigationClient;
     private final PolicyClient policyClient;
+    private final KafkaTemplate<String, RemediationCommand> remediationCommandKafkaTemplate;
 
     public IncidentService(IncidentRepository repository, InvestigationClient investigationClient,
-                           PolicyClient policyClient) {
+                           PolicyClient policyClient,
+                           KafkaTemplate<String, RemediationCommand> remediationCommandKafkaTemplate) {
         this.repository = repository;
         this.investigationClient = investigationClient;
         this.policyClient = policyClient;
+        this.remediationCommandKafkaTemplate = remediationCommandKafkaTemplate;
     }
 
     public List<Map<String, Object>> list(String status) {
@@ -88,7 +97,7 @@ public class IncidentService {
      * the policy service, whose decision drives the incident:
      *
      * <pre>
-     *   ALLOW            -> AUTO_APPROVED (remediation may start)
+     *   ALLOW            -> AUTO_APPROVED -> REMEDIATING (command issued)
      *   REQUIRE_APPROVAL -> AWAITING_APPROVAL (a human approver must click approve)
      *   DENY             -> FAILED (remediation rejected; human decides next)
      * </pre>
@@ -110,11 +119,7 @@ public class IncidentService {
         incident.setPolicyDecision(evaluation.decision());
         incident.setRequestedAt(Instant.now());
         switch (evaluation.decision()) {
-            case "ALLOW" -> {
-                incident.setStatus(IncidentStatus.AUTO_APPROVED.name());
-                incident.setApprovedAt(Instant.now());
-                incident.setApprovedBy(subject.name());
-            }
+            case "ALLOW" -> approveAndIssue(incident, subject);
             case "REQUIRE_APPROVAL" -> incident.setStatus(IncidentStatus.AWAITING_APPROVAL.name());
             default -> incident.setStatus(IncidentStatus.FAILED.name());
         }
@@ -122,7 +127,12 @@ public class IncidentService {
         return repository.save(incident);
     }
 
-    /** Grants an AWAITING_APPROVAL incident, moving it to AUTO_APPROVED. */
+    /**
+     * Grants an AWAITING_APPROVAL incident and issues the remediation command.
+     * The incident moves AUTO_APPROVED → REMEDIATING immediately after the
+     * command is on {@code obs.remediation} (Phase 6 Unit 3); the result
+     * consumer advances it to VERIFYING or FAILED later.
+     */
     @Transactional
     public Incident approve(String incidentId, OperatorActor subject) {
         Incident incident = repository.findByIncidentId(incidentId)
@@ -132,11 +142,28 @@ public class IncidentService {
                     "Incident " + incidentId + " is " + incident.getStatus()
                             + "; only AWAITING_APPROVAL incidents can be approved");
         }
+        approveAndIssue(incident, subject);
+        incident.markUpdated();
+        return repository.save(incident);
+    }
+
+    private void approveAndIssue(Incident incident, OperatorActor subject) {
         incident.setStatus(IncidentStatus.AUTO_APPROVED.name());
         incident.setApprovedAt(Instant.now());
         incident.setApprovedBy(subject.name());
-        incident.markUpdated();
-        return repository.save(incident);
+        UUID commandId = UUID.randomUUID();
+        RemediationCommand command = new RemediationCommand(
+                commandId,
+                incident.getIncidentId(),
+                RemediationAction.ROLLBACK,
+                incident.getServiceId(),
+                Env.valueOf(incident.getEnv()),
+                null,
+                Instant.now(),
+                incident.getApprovedBy());
+        remediationCommandKafkaTemplate.send(Topics.REMEDIATION, commandId.toString(), command);
+        incident.setRemediationCommandId(commandId.toString());
+        incident.setStatus(IncidentStatus.REMEDIATING.name());
     }
 
     public Map<String, Object> toSummary(Incident i) {
@@ -159,6 +186,10 @@ public class IncidentService {
         m.put("requestedAt", i.getRequestedAt() != null ? i.getRequestedAt().toString() : null);
         m.put("approvedAt", i.getApprovedAt() != null ? i.getApprovedAt().toString() : null);
         m.put("approvedBy", i.getApprovedBy());
+        m.put("remediationCommandId", i.getRemediationCommandId());
+        m.put("remediationOutcome", i.getRemediationOutcome());
+        m.put("remediationCompletedAt", i.getRemediationCompletedAt() != null
+                ? i.getRemediationCompletedAt().toString() : null);
         m.put("metadata", safeJson(i.getMetadata()));
         m.put("hypothesis", safeJson(i.getHypothesis()));
         return m;

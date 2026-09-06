@@ -1,9 +1,11 @@
 package io.vykronis.incident;
 
+import io.vykronis.contracts.model.RemediationCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -32,8 +34,12 @@ class IncidentControllerTest {
     @Mock
     private PolicyClient policyClient;
 
+    @Mock
+    private KafkaTemplate<String, RemediationCommand> remediationCommandKafkaTemplate;
+
     private MockMvc mockMvc() {
-        IncidentService service = new IncidentService(repository, investigationClient, policyClient);
+        IncidentService service = new IncidentService(repository, investigationClient, policyClient,
+                remediationCommandKafkaTemplate);
         return MockMvcBuilders.standaloneSetup(new IncidentController(service))
                 .setControllerAdvice(new IncidentApiExceptionHandler())
                 .build();
@@ -170,8 +176,9 @@ class IncidentControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         com.fasterxml.jackson.databind.JsonNode node = io.vykronis.common.json.Json.mapper().readTree(body);
-        assertThat(node.path("status").asText()).isEqualTo("AUTO_APPROVED");
+        assertThat(node.path("status").asText()).isEqualTo("REMEDIATING");
         assertThat(node.path("approvedBy").asText()).isEqualTo("ops");
+        assertThat(node.path("remediationCommandId").asText()).isNotEmpty();
     }
 
     @Test

@@ -1,10 +1,15 @@
 package io.vykronis.incident;
 
+import io.vykronis.contracts.Topics;
+import io.vykronis.contracts.model.RemediationAction;
+import io.vykronis.contracts.model.RemediationCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -12,6 +17,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -20,6 +26,10 @@ import static org.mockito.Mockito.when;
  * produced. If the orchestrator is unavailable or cannot determine a
  * hypothesis, the incident reverts to its previous state rather than getting
  * stuck INVESTIGATING or swallowing a misleading HYPOTHESIS_READY.
+ *
+ * <p>Phase 6 Unit 3: an approved remediation issues a {@link RemediationCommand}
+ * on {@code obs.remediation} and the incident moves to REMEDIATING; the result
+ * consumer (see {@code RemediationResultConsumerTest}) advances it later.</p>
  */
 @ExtendWith(MockitoExtension.class)
 class IncidentServiceTest {
@@ -32,6 +42,9 @@ class IncidentServiceTest {
 
     @Mock
     private PolicyClient policyClient;
+
+    @Mock
+    private KafkaTemplate<String, RemediationCommand> kafkaTemplate;
 
     @InjectMocks
     private IncidentService service;
@@ -147,6 +160,7 @@ class IncidentServiceTest {
         assertThat(result.getPolicyDecision()).isEqualTo("REQUIRE_APPROVAL");
         assertThat(result.getRequestedAt()).isNotNull();
         assertThat(result.getApprovedAt()).isNull();
+        verifyNoInteractions(kafkaTemplate);
     }
 
     @Test
@@ -159,10 +173,24 @@ class IncidentServiceTest {
 
         Incident result = service.requestRemediation("inc-1", approver());
 
-        assertThat(result.getStatus()).isEqualTo(IncidentStatus.AUTO_APPROVED.name());
+        assertThat(result.getStatus()).isEqualTo(IncidentStatus.REMEDIATING.name());
         assertThat(result.getPolicyDecision()).isEqualTo("ALLOW");
         assertThat(result.getApprovedAt()).isNotNull();
         assertThat(result.getApprovedBy()).isEqualTo("ops");
+        assertThat(result.getRemediationCommandId()).isNotNull();
+        assertRollbackCommandIssued(result.getRemediationCommandId(), "PROD", "ops");
+    }
+
+    private void assertRollbackCommandIssued(String commandId, String env, String approvedBy) {
+        ArgumentCaptor<RemediationCommand> captor = ArgumentCaptor.forClass(RemediationCommand.class);
+        verify(kafkaTemplate).send(org.mockito.ArgumentMatchers.eq(Topics.REMEDIATION),
+                org.mockito.ArgumentMatchers.eq(commandId), captor.capture());
+        assertThat(captor.getValue().incidentId()).isEqualTo("inc-1");
+        assertThat(captor.getValue().action()).isEqualTo(RemediationAction.ROLLBACK);
+        assertThat(captor.getValue().serviceId()).isEqualTo("payment-service");
+        assertThat(captor.getValue().environment().name()).isEqualTo(env);
+        assertThat(captor.getValue().subject()).isEqualTo(approvedBy);
+        assertThat(captor.getValue().issuedAt()).isNotNull();
     }
 
     @Test
@@ -175,8 +203,9 @@ class IncidentServiceTest {
 
         Incident result = service.requestRemediation("inc-1", human());
 
-        assertThat(result.getStatus()).isEqualTo(IncidentStatus.AUTO_APPROVED.name());
+        assertThat(result.getStatus()).isEqualTo(IncidentStatus.REMEDIATING.name());
         assertThat(result.getApprovedBy()).isEqualTo("alice");
+        assertRollbackCommandIssued(result.getRemediationCommandId(), "DEV", "alice");
     }
 
     @Test
@@ -192,6 +221,7 @@ class IncidentServiceTest {
         assertThat(result.getStatus()).isEqualTo(IncidentStatus.FAILED.name());
         assertThat(result.getPolicyDecision()).isEqualTo("DENY");
         assertThat(result.getApprovedAt()).isNull();
+        verifyNoInteractions(kafkaTemplate);
     }
 
     @Test
@@ -228,9 +258,11 @@ class IncidentServiceTest {
 
         Incident result = service.approve("inc-1", approver());
 
-        assertThat(result.getStatus()).isEqualTo(IncidentStatus.AUTO_APPROVED.name());
+        assertThat(result.getStatus()).isEqualTo(IncidentStatus.REMEDIATING.name());
         assertThat(result.getApprovedAt()).isNotNull();
         assertThat(result.getApprovedBy()).isEqualTo("ops");
+        assertThat(result.getRemediationCommandId()).isNotNull();
+        assertRollbackCommandIssued(result.getRemediationCommandId(), "PROD", "ops");
     }
 
     @Test
