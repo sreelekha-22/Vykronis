@@ -24,7 +24,8 @@ import java.util.List;
  * the same idempotency-keyed record (Phase 7 Unit 2 verifies this).</p>
  *
  * <ul>
- *   <li>ROLLBACK -> {@code kubectl rollout undo deployment/<svc> -n <ns>}</li>
+ *   <li>ROLLBACK -> {@code kubectl rollout undo deployment/<svc> -n <ns>}
+ *       (with {@code --to-revision} when the command pins a target version)</li>
  *   <li>RESTART  -> {@code kubectl rollout restart deployment/<svc> -n <ns>}</li>
  * </ul>
  */
@@ -60,9 +61,9 @@ public class KubernetesExecutor implements RemediationExecutor {
 
     /**
      * Maps a {@link RemediationCommand} to the exact {@code kubectl} argv.
-     * ROLLBACK undoes the current rollout (Kubernetes equivalent of the
-     * Compose "recreate to pinned version" step); RESTART recycles pods
-     * in place.
+     * ROLLBACK undoes the current rollout, pinned to {@code --to-revision}
+     * when the command carries a {@code targetVersion} (otherwise the previous
+     * revision); RESTART recycles pods in place and has no revision semantics.
      */
     List<String> commandLine(RemediationCommand command) {
         List<String> argv = new ArrayList<>();
@@ -76,6 +77,11 @@ public class KubernetesExecutor implements RemediationExecutor {
         argv.add("deployment/" + command.serviceId());
         argv.add("-n");
         argv.add(options.namespace());
+        if (command.action() == RemediationAction.ROLLBACK
+                && command.targetVersion() != null
+                && !command.targetVersion().isBlank()) {
+            argv.add("--to-revision=" + command.targetVersion());
+        }
         return argv;
     }
 

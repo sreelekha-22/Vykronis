@@ -34,6 +34,12 @@ class KubernetesExecutorTest {
                 null, Instant.parse("2026-09-07T10:00:00Z"), "ops");
     }
 
+    private RemediationCommand command(RemediationAction action, UUID commandId, String targetVersion) {
+        return new RemediationCommand(
+                commandId, "inc-7", action, "payment-service", Env.PROD,
+                targetVersion, Instant.parse("2026-09-07T10:00:00Z"), "ops");
+    }
+
     private static final class FakeStore implements RemediationRecordStore {
         private final ConcurrentHashMap<String, RemediationRecord> rows = new ConcurrentHashMap<>();
 
@@ -81,6 +87,41 @@ class KubernetesExecutorTest {
 
         executor.execute(command(RemediationAction.RESTART, UUID.randomUUID()));
 
+        assertThat(runner.captured).containsExactly(
+                "kubectl", "rollout", "restart", "deployment/payment-service", "-n", "vykronis");
+    }
+
+    @Test
+    void rollbackWithTargetVersionPinsToRevision() {
+        FakeRunner runner = new FakeRunner(true);
+        KubernetesExecutor executor = new KubernetesExecutor(runner, store, options);
+
+        executor.execute(command(RemediationAction.ROLLBACK, UUID.randomUUID(), "3"));
+
+        assertThat(runner.captured).containsExactly(
+                "kubectl", "rollout", "undo", "deployment/payment-service", "-n", "vykronis",
+                "--to-revision=3");
+    }
+
+    @Test
+    void rollbackWithoutTargetVersionUndoesToPreviousRevision() {
+        FakeRunner runner = new FakeRunner(true);
+        KubernetesExecutor executor = new KubernetesExecutor(runner, store, options);
+
+        executor.execute(command(RemediationAction.ROLLBACK, UUID.randomUUID()));
+
+        assertThat(runner.captured).containsExactly(
+                "kubectl", "rollout", "undo", "deployment/payment-service", "-n", "vykronis");
+    }
+
+    @Test
+    void restartIgnoresTargetVersionBecauseRolloutRestartHasNoRevisionSemantics() {
+        FakeRunner runner = new FakeRunner(true);
+        KubernetesExecutor executor = new KubernetesExecutor(runner, store, options);
+
+        executor.execute(command(RemediationAction.RESTART, UUID.randomUUID(), "3"));
+
+        assertThat(runner.captured).doesNotContain("--to-revision=3");
         assertThat(runner.captured).containsExactly(
                 "kubectl", "rollout", "restart", "deployment/payment-service", "-n", "vykronis");
     }
