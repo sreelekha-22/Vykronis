@@ -99,7 +99,7 @@ kubectl -n vykronis get pods
 | 1 | Start infra | `docker compose up -d` | `kind create cluster` / `k3d cluster create` |
 | 2 | Deploy app | `docker compose -f ...apps.yml up -d` | `helm install vykronis ./infra/helm/vykronis` |
 | 3 | Health check | `curl /actuator/health` | `kubectl exec -it deploy/api-gateway -- curl localhost:8080/actuator/health` |
-| 4 | Start fault | `mvn -pl demo-service spring-boot:run -Dprofiles=demo-fault` | Same (runs locally against cluster Kafka) |
+| 4 | Start fault | `mvn -pl demo-service spring-boot:run -Dprofiles=demo-traffic` | Same (runs locally against cluster Kafka) |
 | 5 | Watch metrics | `kafka-console-consumer --topic obs.metrics` | Same (Kafka is in-cluster; port-forward 9092) |
 | 6 | Event persist | `curl /api/events` | Same (port-forward 8082) |
 | 7 | Correlation | `curl /api/correlation/candidates` | Same (port-forward 8083) |

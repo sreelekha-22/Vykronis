@@ -44,7 +44,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jacoco.version>0.8.13</jacoco.version>
         <coverage.line.minimum>0.80</coverage.line.minimum>
-        <coverage.branch.minimum>0.67</coverage.branch.minimum>
+        <coverage.branch.minimum>0.70</coverage.branch.minimum>
     </properties>
 
     <dependencyManagement>

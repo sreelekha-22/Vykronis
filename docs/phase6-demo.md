@@ -110,7 +110,7 @@ All three should report `UP`.
 
 ### 6. Start the fault scenario
 ```bash
-mvn -pl platform/demo-service spring-boot:run -Dspring-boot.run.profiles=demo-fault
+mvn -pl platform/demo-service spring-boot:run -Dspring-boot.run.profiles=demo-traffic
 ```
 `DemoRunner` produces a sustained `error_rate` / `error_count`
 spike to topic `obs.metrics`. (Equivalent: a manual
