@@ -104,6 +104,9 @@ incident `8084`, orchestrator `8085`, policy `8086`, remediation `8087`.
 **4. Or run everything in Docker (builds each service image):**
 
 ```powershell
+# one-time: shared slim jlink JRE (with a baked AppCDS archive) used as the
+# runtime stage of every service image.
+docker build -f infra/docker/runtime.Dockerfile -t vykronis/runtime:local .
 docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.apps.yml --profile apps up -d --build
 ```
 

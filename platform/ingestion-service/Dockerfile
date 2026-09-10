@@ -7,8 +7,9 @@ COPY libs ./libs
 COPY platform ./platform
 RUN mvn -q -pl platform/ingestion-service -am package -DskipTests
 
-# Runtime stage.
-FROM eclipse-temurin:25-jre
+# Runtime stage: shared slim jlink JRE (infra/docker/runtime.Dockerfile ->
+# vykronis/runtime:local; must be built once before this image).
+FROM vykronis/runtime:local
 WORKDIR /app
 COPY --from=build /build/platform/ingestion-service/target/*.jar app.jar
 EXPOSE 8081
