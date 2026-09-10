@@ -10,7 +10,9 @@ image:
   tag: local
   pullPolicy: IfNotPresent
 
-# The 9 platform services (name + container port must match application.properties).
+# The 8 platform services (name + container port must match application.properties).
+# agent-orchestrator also hosts the demo traffic generator (folked demo-service),
+# so there is only one :8085 workload.
 services:
   - name: api-gateway
     port: 8080
@@ -22,8 +24,6 @@ services:
     port: 8083
   - name: incident-service
     port: 8084
-  - name: demo-service
-    port: 8085
   - name: agent-orchestrator
     port: 8085
   - name: policy-service

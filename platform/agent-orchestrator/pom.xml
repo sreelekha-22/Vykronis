@@ -13,7 +13,7 @@
 
     <artifactId>agent-orchestrator</artifactId>
     <name>agent-orchestrator</name>
-    <description>Vykronis agent-orchestrator — Spring AI tool-constrained investigation agents (Phase 0: health only)</description>
+    <description>Vykronis agent-orchestrator — Spring AI tool-constrained investigation agents + the demo traffic generator (formerly demo-service)</description>
 
     <dependencies>
         <dependency>
@@ -64,6 +64,13 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-google-genai</artifactId>
+        </dependency>
+
+        <!-- Demo traffic generator (folded in from demo-service): metrics /
+             deployments / JFR producers over Kafka. -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
         </dependency>
 
         <dependency>

@@ -25,9 +25,9 @@ curl -X POST "http://localhost:8085/api/demo/deploy/payment-service?version=1.4.
 ```
 
 ### 3. Let the error burst flow
-`run-local.bat` does **not** launch the demo-service automatically. Start it with the `demo-traffic` profile (auto-generation is profile-gated so the service never spams metrics on a plain boot):
+The demo traffic generator runs inside the `agent-orchestrator` but is **off by default**. Start it with the `demo-traffic` profile (auto-generation is profile-gated so a plain boot never spams metrics):
 ```bash
-mvn -pl platform/demo-service spring-boot:run -Dspring-boot.run.profiles=demo-traffic
+mvn -pl platform/agent-orchestrator spring-boot:run -Dspring-boot.run.profiles=demo-traffic
 ```
 `DemoRunner` emits a ~6-sample error burst for `payment-service` (error_rate 45–65%) every 12 iterations (~6 seconds). The correlation engine:
 - windows `obs.metrics` into 1-minute tumbling windows
@@ -68,7 +68,7 @@ DemoRunner ──obs.metrics──▶ CorrelationEngine (Kafka Streams)
 | Topic | Producer | Consumer |
 |-------|----------|----------|
 | `obs.metrics` | DemoRunner | correlation-engine (streams) |
-| `obs.deployments` | DemoService `/deploy` | correlation-engine (GlobalKTable) |
+| `obs.deployments` | agent-orchestrator `/api/demo/deploy` | correlation-engine (GlobalKTable) |
 | `obs.alerts` | correlation-engine | incident-service |
 
 ## Tuning knobs (application.properties of correlation-engine)

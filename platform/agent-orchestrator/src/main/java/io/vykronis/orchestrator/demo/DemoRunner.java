@@ -1,4 +1,4 @@
-package io.vykronis.demo;
+package io.vykronis.orchestrator.demo;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.vykronis.common.json.Json;
@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Generates demo traffic onto {@code obs.metrics} for the four demo services.
  *
  * <p>Auto-generation is gated behind the {@code demo-traffic} profile so the
- * service does not spam metrics on every boot. Most iterations are healthy (low
+ * process does not spam metrics on every boot. Most iterations are healthy (low
  * error rate). Every {@code BURST_EVERY} iterations it emits an error burst — a
  * stretch of elevated {@code error_rate} — for {@code payment-service}. The
  * correlation engine windows these and, when the error rate breaches the

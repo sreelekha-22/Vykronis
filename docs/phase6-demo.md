@@ -110,7 +110,7 @@ All three should report `UP`.
 
 ### 6. Start the fault scenario
 ```bash
-mvn -pl platform/demo-service spring-boot:run -Dspring-boot.run.profiles=demo-traffic
+mvn -pl platform/agent-orchestrator spring-boot:run -Dspring-boot.run.profiles=demo-traffic
 ```
 `DemoRunner` produces a sustained `error_rate` / `error_count`
 spike to topic `obs.metrics`. (Equivalent: a manual
@@ -125,12 +125,12 @@ docker compose -f infra/compose/docker-compose.yml exec kafka \
 
 ### 8. Confirm event-service persisted them
 ```bash
-curl "http://localhost:8082/api/events?serviceId=demo-service&type=METRIC&limit=5" | jq '.items | length'
+curl "http://localhost:8082/api/events?serviceId=payment-service&type=METRIC&limit=5" | jq '.items | length'
 ```
 
 ### 9. Watch the correlation-engine coalesce them
 ```bash
-curl "http://localhost:8083/api/correlation/candidates?serviceId=demo-service" | jq .
+curl "http://localhost:8083/api/correlation/candidates?serviceId=payment-service" | jq .
 ```
 A single candidate should remain.
 
@@ -174,10 +174,10 @@ by `commandId`, then runs:
 ```
 docker compose -f infra/compose/docker-compose.yml \
                -f infra/compose/docker-compose.apps.yml \
-               up -d --no-deps demo-service
+               up -d --no-deps agent-orchestrator
 ```
 
-A `RESTART` action runs `... restart demo-service` instead. On
+A `RESTART` action runs `... restart agent-orchestrator` instead. On
 exit `0` the executor stores a `COMPLETED` result; otherwise
 `FAILED` (the docker stderr is trimmed into the learn `detail`).
 A duplicate `commandId` replay is a no-op — the stored result is
@@ -228,7 +228,7 @@ docker compose -f infra/compose/docker-compose.yml exec postgres \
   "select incident_id, service_id, env, action, result, window_start, window_end, verified_at from remediation_learn order by verified_at desc limit 5;"
 ```
 
-That's the closed loop: a fault in `demo-service` is detected,
-correlated, hypothesised, policy-gated, rolled back, verified, and
-recorded. The next time the same pattern emerges the learn row
-makes the agent's suggestion more confident.
+That's the closed loop: a fault (an error burst on `payment-service`, seeded by
+the demo generator) is detected, correlated, hypothesised, policy-gated, rolled
+back, verified, and recorded. The next time the same pattern emerges the learn
+row makes the agent's suggestion more confident.

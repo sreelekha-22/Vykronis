@@ -81,7 +81,7 @@ docker compose -f infra/compose/docker-compose.yml --profile observability --pro
 .\scripts\run-local.bat
 
 # optional: generate error-burst + JFR traffic
-mvn -pl platform/demo-service spring-boot:run -Dspring-boot.run.profiles=demo-traffic,jfr-stream
+mvn -pl platform/agent-orchestrator spring-boot:run -Dspring-boot.run.profiles=demo-traffic,jfr-stream
 
 # Vykronis UI (dev)
 cd ui\web

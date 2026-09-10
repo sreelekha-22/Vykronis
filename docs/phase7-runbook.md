@@ -99,7 +99,7 @@ kubectl -n vykronis get pods
 | 1 | Start infra | `docker compose up -d` | `kind create cluster` / `k3d cluster create` |
 | 2 | Deploy app | `docker compose -f ...apps.yml up -d` | `helm install vykronis ./infra/helm/vykronis` |
 | 3 | Health check | `curl /actuator/health` | `kubectl exec -it deploy/api-gateway -- curl localhost:8080/actuator/health` |
-| 4 | Start fault | `mvn -pl demo-service spring-boot:run -Dprofiles=demo-traffic` | Same (runs locally against cluster Kafka) |
+| 4 | Start fault | `mvn -pl agent-orchestrator spring-boot:run -Dprofiles=demo-traffic` | Same (runs locally against cluster Kafka) |
 | 5 | Watch metrics | `kafka-console-consumer --topic obs.metrics` | Same (Kafka is in-cluster; port-forward 9092) |
 | 6 | Event persist | `curl /api/events` | Same (port-forward 8082) |
 | 7 | Correlation | `curl /api/correlation/candidates` | Same (port-forward 8083) |
@@ -108,7 +108,7 @@ kubectl -n vykronis get pods
 | 10 | Investigate | `POST /investigate` | Same |
 | 11 | Request remediation | `POST /remediation` | Same |
 | 12 | Approve | `POST /approve` | Same |
-| 13 | Executor runs | `docker compose up -d --no-deps demo-service` | `kubectl rollout undo deployment/demo-service -n vykronis` |
+| 13 | Executor runs | `docker compose up -d --no-deps agent-orchestrator` | `kubectl rollout undo deployment/agent-orchestrator -n vykronis` |
 | 14 | Verify window | `VERIFYING` 60s → `RESOLVED` / re-breach → `FAILED` | Identical (incident-service is the same) |
 | 15 | Learn table | `psql remediation_learn` | `kubectl exec -it deploy/postgres -- psql -U vykronis -d vykronis -c "select ... from remediation_learn"` |
 

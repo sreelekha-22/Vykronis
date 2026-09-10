@@ -1,4 +1,4 @@
-package io.vykronis.demo;
+package io.vykronis.orchestrator.demo;
 
 import io.vykronis.common.json.Json;
 import io.vykronis.contracts.model.JfrRecord;
@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Producer wiring for the demo-service. Metrics go out as real JSON
+ * Producer wiring for the demo traffic generator. Metrics go out as real JSON
  * {@link ObservabilityEvent}s (so the correlation engine can deserialize them),
  * deployment records are marshalled to a JSON string by
  * {@link DeploymentService}, and JFR chunks stream out as typed

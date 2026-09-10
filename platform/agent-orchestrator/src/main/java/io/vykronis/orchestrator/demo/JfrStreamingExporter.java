@@ -1,4 +1,4 @@
-package io.vykronis.demo;
+package io.vykronis.orchestrator.demo;
 
 import io.vykronis.contracts.Topics;
 import io.vykronis.contracts.model.Env;

@@ -1,4 +1,4 @@
-package io.vykronis.demo;
+package io.vykronis.orchestrator.demo;
 
 import io.vykronis.contracts.model.ObservabilityEvent;
 import org.junit.jupiter.api.Test;

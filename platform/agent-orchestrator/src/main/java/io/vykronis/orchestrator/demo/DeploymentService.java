@@ -1,4 +1,4 @@
-package io.vykronis.demo;
+package io.vykronis.orchestrator.demo;
 
 import io.vykronis.common.json.Json;
 import io.vykronis.contracts.model.DeploymentEvent;
@@ -15,9 +15,9 @@ import java.util.UUID;
  * correlation engine joins these against error/latency windows so an incident
  * can be attributed to a specific deployment/version.
  *
- * <p>The producer in this module uses a String serializer, so we marshal the
- * deployment to JSON explicitly with the shared mapper. The correlation side
- * deserializes from the same JSON shape.</p>
+ * <p>The producer uses a String serializer, so we marshal the deployment to
+ * JSON explicitly with the shared mapper. The correlation side deserializes
+ * from the same JSON shape.</p>
  */
 @Service
 public class DeploymentService {

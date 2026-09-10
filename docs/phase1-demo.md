@@ -29,9 +29,9 @@ Wait for Kafka, Postgres, Redis to be healthy.
 ```
 
 ### 4. Trigger Error Burst
-Start the `demo-service` with the `demo-traffic` profile (auto-generation is profile-gated so a plain boot never spams metrics):
+Start the demo traffic generator on the `agent-orchestrator` with the `demo-traffic` profile (auto-generation is profile-gated so a plain boot never spams metrics):
 ```bash
-mvn -pl platform/demo-service spring-boot:run -Dspring-boot.run.profiles=demo-traffic
+mvn -pl platform/agent-orchestrator spring-boot:run -Dspring-boot.run.profiles=demo-traffic
 ```
 `DemoRunner` then produces error burst events to Kafka topic `obs.metrics`.
 
@@ -86,5 +86,5 @@ DemoRunner → Kafka (obs.metrics) → EventService → Postgres
 
 ## Troubleshooting
 - **Kafka not ready**: Wait 30s after `docker compose up`
-- **No incidents**: Check `demo-service` logs for traffic generation
+- **No incidents**: Check `agent-orchestrator` logs for traffic generation
 - **UI empty**: Verify incident-service is running on port 8084

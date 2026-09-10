@@ -1,4 +1,4 @@
-package io.vykronis.demo;
+package io.vykronis.orchestrator.demo;
 
 import jdk.jfr.Configuration;
 import jdk.jfr.Recording;
@@ -11,8 +11,8 @@ import java.time.Duration;
 
 /**
  * Captures a short, real JFR recording chunk from the JVM's built-in Flight
- * Recorder. Used by the demo service to stream genuine GC/allocation evidence
- * onto {@code obs.jfr}, which the timeline can later surface.
+ * Recorder. Used by the demo traffic generator to stream genuine GC/allocation
+ * evidence onto {@code obs.jfr}, which the timeline can later surface.
  *
  * <p>Each call runs a temporary recording against the default profile for a
  * brief {@link #DURATION}, dumps the recording to a temp file, and returns its

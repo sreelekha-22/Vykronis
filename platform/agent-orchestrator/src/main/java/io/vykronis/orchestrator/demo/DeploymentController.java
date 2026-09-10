@@ -1,4 +1,4 @@
-package io.vykronis.demo;
+package io.vykronis.orchestrator.demo;
 
 import io.vykronis.common.api.ApiError;
 import io.vykronis.contracts.model.Env;
