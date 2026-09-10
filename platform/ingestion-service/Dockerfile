@@ -4,7 +4,7 @@ WORKDIR /build
 COPY pom.xml .
 COPY contracts ./contracts
 COPY libs ./libs
-COPY platform/ingestion-service ./platform/ingestion-service
+COPY platform ./platform
 RUN mvn -q -pl platform/ingestion-service -am package -DskipTests
 
 # Runtime stage.

@@ -4,7 +4,7 @@ WORKDIR /build
 COPY pom.xml .
 COPY contracts ./contracts
 COPY libs ./libs
-COPY platform/remediation-service ./platform/remediation-service
+COPY platform ./platform
 RUN mvn -q -pl platform/remediation-service -am package -DskipTests
 
 # Runtime stage.

@@ -4,7 +4,7 @@ WORKDIR /build
 COPY pom.xml .
 COPY contracts ./contracts
 COPY libs ./libs
-COPY platform/agent-orchestrator ./platform/agent-orchestrator
+COPY platform ./platform
 RUN mvn -q -pl platform/agent-orchestrator -am package -DskipTests
 
 # Runtime stage.

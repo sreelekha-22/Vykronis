@@ -4,7 +4,7 @@ WORKDIR /build
 COPY pom.xml .
 COPY contracts ./contracts
 COPY libs ./libs
-COPY platform/api-gateway ./platform/api-gateway
+COPY platform ./platform
 RUN mvn -q -pl platform/api-gateway -am package -DskipTests
 
 # Runtime stage.

@@ -35,14 +35,15 @@ probes:
   livenessPath: /actuator/health/liveness
   readinessPath: /actuator/health/readiness
   initialDelaySeconds: 30
-  periodSeconds: 10
+  readinessInitialDelaySeconds: 30
+  periodSeconds: 20
+  startupFailureThreshold: 30
 
 resources:
   requests:
     cpu: 100m
-    memory: 256Mi
+    memory: 128Mi
   limits:
-    cpu: 500m
     memory: 512Mi
 
 vykronis:
@@ -50,6 +51,8 @@ vykronis:
     target: kubernetes
     kubernetes:
       namespace: vykronis
+  java:
+    opts: -Xms64m -Xmx192m -Xss512k -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
   kafka:
     bootstrap: kafka:9092
   db:
@@ -61,7 +64,22 @@ postgres:
   image: postgres:16
   port: 5432
   storage: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1
+      memory: 768Mi
 
 kafka:
   image: apache/kafka:3.8.0
   port: 9092
+  heapOpts: -Xms64M -Xmx256M -XX:MaxMetaspaceSize=96m
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1
+      memory: 640Mi

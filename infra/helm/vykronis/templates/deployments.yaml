@@ -9,6 +9,8 @@ metadata:
     {{- include "vykronis.labels" $ | nindent 4 }}
 spec:
   replicas: {{ $.Values.replicaCount }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "vykronis.selectorLabels" (dict "Chart" $.Chart "Release" $.Release "service" .name) | nindent 6 }}
@@ -26,6 +28,8 @@ spec:
               containerPort: {{ .port }}
               protocol: TCP
           env:
+            - name: JAVA_TOOL_OPTIONS
+              value: {{ $.Values.vykronis.java.opts | quote }}
             - name: VYKRONIS_REMEDIATION_TARGET
               value: {{ $.Values.vykronis.remediation.target | quote }}
             - name: VYKRONIS_KAFKA_BOOTSTRAP
@@ -36,6 +40,14 @@ spec:
               value: {{ $.Values.vykronis.db.username | quote }}
             - name: VYKRONIS_DB_PASSWORD
               value: {{ $.Values.vykronis.db.password | quote }}
+          startupProbe:
+            httpGet:
+              path: {{ $.Values.probes.livenessPath }}
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: {{ $.Values.probes.startupFailureThreshold }}
           livenessProbe:
             httpGet:
               path: {{ $.Values.probes.livenessPath }}
@@ -46,7 +58,7 @@ spec:
             httpGet:
               path: {{ $.Values.probes.readinessPath }}
               port: http
-            initialDelaySeconds: {{ $.Values.probes.initialDelaySeconds }}
+            initialDelaySeconds: {{ $.Values.probes.readinessInitialDelaySeconds }}
             periodSeconds: {{ $.Values.probes.periodSeconds }}
           resources:
             {{- toYaml $.Values.resources | nindent 12 }}

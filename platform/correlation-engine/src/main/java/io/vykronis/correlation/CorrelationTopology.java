@@ -66,8 +66,8 @@ public class CorrelationTopology {
     @Value("${correlation.error-count-threshold:5}")
     private long errorCountThreshold = 5;
 
-    @Bean
-    public Topology correlationTopology(StreamsBuilder builder) {
+    @Bean(name = "streamsTopology")
+    public Topology topology(StreamsBuilder builder) {
         GlobalKTable<String, DeploymentEvent> deployments = builder.globalTable(
                 DEPLOYMENTS_TOPIC,
                 Consumed.with(Serdes.String(), serde.deploymentEvent),

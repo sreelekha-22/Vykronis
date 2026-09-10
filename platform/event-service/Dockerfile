@@ -4,7 +4,7 @@ WORKDIR /build
 COPY pom.xml .
 COPY contracts ./contracts
 COPY libs ./libs
-COPY platform/event-service ./platform/event-service
+COPY platform ./platform
 RUN mvn -q -pl platform/event-service -am package -DskipTests
 
 # Runtime stage.

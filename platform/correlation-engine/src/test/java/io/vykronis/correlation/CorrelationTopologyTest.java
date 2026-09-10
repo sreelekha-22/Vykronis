@@ -159,7 +159,7 @@ class CorrelationTopologyTest {
         Harness() {
             StreamsBuilder builder = new StreamsBuilder();
             CorrelationTopology config = new CorrelationTopology();
-            Topology topology = config.correlationTopology(builder);
+            Topology topology = config.topology(builder);
 
             Serde<String> stringSerde = Serdes.String();
             Serializer<String> stringSer = stringSerde.serializer();

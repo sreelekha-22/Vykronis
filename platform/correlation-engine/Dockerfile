@@ -4,7 +4,7 @@ WORKDIR /build
 COPY pom.xml .
 COPY contracts ./contracts
 COPY libs ./libs
-COPY platform/correlation-engine ./platform/correlation-engine
+COPY platform ./platform
 RUN mvn -q -pl platform/correlation-engine -am package -DskipTests
 
 # Runtime stage.

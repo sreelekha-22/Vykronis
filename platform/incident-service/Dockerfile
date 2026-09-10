@@ -4,7 +4,7 @@ WORKDIR /build
 COPY pom.xml .
 COPY contracts ./contracts
 COPY libs ./libs
-COPY platform/incident-service ./platform/incident-service
+COPY platform ./platform
 RUN mvn -q -pl platform/incident-service -am package -DskipTests
 
 # Runtime stage.

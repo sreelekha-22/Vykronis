@@ -1,0 +1,11 @@
+**/target/
+ui/
+node_modules/
+.git/
+.vscode/
+.idea/
+*.iml
+original_pom.xml
+docs/
+notes/
+*.log
