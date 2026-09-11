@@ -24,6 +24,8 @@ out/
 npm-debug.log*
 *.tsbuildinfo
 .next-env.d.ts
+coverage/
+ui/web/coverage/
 
 # ---- Environment / secrets ----
 .env
@@ -31,6 +33,9 @@ npm-debug.log*
 !.env.example
 *.pem
 *.key
+
+# ---- Workspace backup (never commit) ----
+original_pom.xml
 
 # ---- Observability local data ----
 data/
