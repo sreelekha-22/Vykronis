@@ -3,6 +3,8 @@
 # Usage (from the repo root):
 #   docker compose -f infra/compose/docker-compose.yml \
 #                 -f infra/compose/docker-compose.apps.yml up -d --build
+# Images build as vykronis/<service>:local — the same tag the helm chart /
+# `kind load docker-image` demo expects, so CI's kind smoke can reuse them.
 name: vykronis
 
 x-common-otel: &common-otel
@@ -11,6 +13,7 @@ x-common-otel: &common-otel
 
 services:
   api-gateway:
+    image: vykronis/api-gateway:local
     build:
       context: ../..
       dockerfile: platform/api-gateway/Dockerfile
@@ -23,6 +26,7 @@ services:
     profiles: ["apps"]
 
   ingestion-service:
+    image: vykronis/ingestion-service:local
     build:
       context: ../..
       dockerfile: platform/ingestion-service/Dockerfile
@@ -33,6 +37,7 @@ services:
     profiles: ["apps"]
 
   event-service:
+    image: vykronis/event-service:local
     build:
       context: ../..
       dockerfile: platform/event-service/Dockerfile
@@ -43,6 +48,7 @@ services:
     profiles: ["apps"]
 
   correlation-engine:
+    image: vykronis/correlation-engine:local
     build:
       context: ../..
       dockerfile: platform/correlation-engine/Dockerfile
@@ -53,6 +59,7 @@ services:
     profiles: ["apps"]
 
   incident-service:
+    image: vykronis/incident-service:local
     build:
       context: ../..
       dockerfile: platform/incident-service/Dockerfile
@@ -66,6 +73,7 @@ services:
     profiles: ["apps"]
 
   agent-orchestrator:
+    image: vykronis/agent-orchestrator:local
     build:
       context: ../..
       dockerfile: platform/agent-orchestrator/Dockerfile
@@ -87,6 +95,7 @@ services:
     profiles: ["apps"]
 
   policy-service:
+    image: vykronis/policy-service:local
     build:
       context: ../..
       dockerfile: platform/policy-service/Dockerfile
@@ -97,6 +106,7 @@ services:
     profiles: ["apps"]
 
   remediation-service:
+    image: vykronis/remediation-service:local
     build:
       context: ../..
       dockerfile: platform/remediation-service/Dockerfile

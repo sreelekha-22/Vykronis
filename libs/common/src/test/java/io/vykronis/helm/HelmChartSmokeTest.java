@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
  * fails with exit code 1. Once the chart is scaffolded, this test verifies:</p>
  * <ol>
  *   <li>{@code helm template} renders without error (exit 0).</li>
- *   <li>All 9 platform services + infra have Deployment/StatefulSet resources.</li>
+ *   <li>All 8 platform services + infra have Deployment/StatefulSet resources.</li>
  *   <li>{@code kubeconform} validates the rendered YAML (strict, Kubernetes 1.29).</li>
  *   <li>Liveness/readiness probes are present on every Deployment.</li>
  *   <li>Resource requests/limits are set.</li>
@@ -71,22 +71,34 @@ class HelmChartSmokeTest {
 
     @Test
     void kindSmokeDeploysChartAndPodsReady() throws Exception {
-        // Heavyweight and opt-in: needs Docker + all service images built
-        // (e.g. `kind load docker-image ...`). Enable with -Dhelm.smoke.kind=true.
+        // Heavyweight and opt-in: needs Docker + all service images built.
+        // Enable with -Dhelm.smoke.kind=true. An existing cluster is reused
+        // (e.g. a local dev box); otherwise a fresh one is created and deleted.
         assumeThat(Boolean.getBoolean("helm.smoke.kind"))
                 .as("kind smoke is opt-in (-Dhelm.smoke.kind=true)").isTrue();
         assumeThat(isToolAvailable("helm")).as("helm not on PATH").isTrue();
         assumeThat(isToolAvailable("kind")).as("kind not on PATH").isTrue();
+        assumeThat(isToolAvailable("kubectl")).as("kubectl not on PATH").isTrue();
 
-        // Create a kind cluster
-        ProcessBuilder create = new ProcessBuilder("kind", "create", "cluster", "--name", "vykronis-smoke", "--wait", "120s");
-        create.redirectErrorStream(true);
-        Process cp = create.start();
-        String createOut = new String(cp.getInputStream().readAllBytes());
-        int createExit = cp.waitFor();
-        assumeThat(createExit).as("kind create cluster failed (Docker may not be available):\n" + createOut).isEqualTo(0);
-
+        final String cluster = "vykronis-smoke";
+        boolean createdHere = false;
+        boolean deleteOnExit = false;
         try {
+            if (!clusterExists(cluster)) {
+                ProcessBuilder create = new ProcessBuilder("kind", "create", "cluster", "--name", cluster, "--wait", "120s");
+                create.redirectErrorStream(true);
+                Process cp = create.start();
+                String createOut = new String(cp.getInputStream().readAllBytes());
+                int createExit = cp.waitFor();
+                assumeThat(createExit).as("kind create cluster failed (Docker may not be available):\n" + createOut).isEqualTo(0);
+                createdHere = true;
+            }
+
+            // Make chart images available to the cluster (skips images that are
+            // not present in the local docker daemon — build first via compose).
+            int loaded = loadChartImages(cluster);
+            assumeThat(loaded).as("no vykronis images in local docker daemon; build them first (docker compose build)").isGreaterThan(0);
+
             // Install chart
             ProcessBuilder install = new ProcessBuilder("helm", "install", "vykronis", CHART_DIR.toString(),
                     "-n", "vykronis-smoke", "--create-namespace", "--wait", "--timeout", "180s");
@@ -106,10 +118,54 @@ class HelmChartSmokeTest {
             int podsExit = pp.waitFor();
 
             assertThat(podsExit).as("pods not ready:\n" + podsOut).isEqualTo(0);
+
+            // Only reach here on success: keep a freshly-created cluster around if
+            // any step above failed, so CI logs can be inspected before it is torn down.
+            deleteOnExit = true;
         } finally {
-            // Cleanup
-            new ProcessBuilder("kind", "delete", "cluster", "--name", "vykronis-smoke").start().waitFor();
+            if (createdHere && deleteOnExit) {
+                new ProcessBuilder("kind", "delete", "cluster", "--name", cluster).start().waitFor();
+            }
         }
+    }
+
+    private static boolean clusterExists(String name) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder("kind", "get", "clusters");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String out = new String(p.getInputStream().readAllBytes());
+        p.waitFor();
+        return out.lines().anyMatch(line -> line.trim().equals(name));
+    }
+
+    private static int loadChartImages(String cluster) throws Exception {
+        String[] services = {
+                "api-gateway", "ingestion-service", "event-service", "correlation-engine",
+                "incident-service", "agent-orchestrator", "policy-service", "remediation-service"
+        };
+        int loaded = 0;
+        for (String svc : services) {
+            String image = "vykronis/" + svc + ":local";
+            if (!dockerImageExists(image)) {
+                continue;
+            }
+            ProcessBuilder lb = new ProcessBuilder("kind", "load", "docker-image", image, "--name", cluster);
+            lb.redirectErrorStream(true);
+            Process lp = lb.start();
+            String out = new String(lp.getInputStream().readAllBytes());
+            int exit = lp.waitFor();
+            assumeThat(exit).as("kind load docker-image failed for " + image + ":\n" + out).isEqualTo(0);
+            loaded++;
+        }
+        return loaded;
+    }
+
+    private static boolean dockerImageExists(String image) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder("docker", "image", "inspect", image);
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        p.waitFor();
+        return p.exitValue() == 0;
     }
 
     private static boolean isToolAvailable(String name) {

@@ -176,7 +176,7 @@ vykronis:
 Flip `auth.enabled=true` and deploy Keycloak (see Phase 5 docs) to run the secured demo path.
 
 ## CI integration
-The GitHub Actions workflow (Phase 7 Unit 3) runs the full reactor on `ubuntu-latest` + `windows-latest` with the JaCoCo gate (line ≥ 80%, branch ≥ 67%). It does **not** spin up a kind cluster — that is a manual step for the demo. Future work: add a `kind` smoke job to the CI matrix.
+The GitHub Actions workflow (Phase 7 Unit 3) runs the full reactor on `ubuntu-latest` + `windows-latest` with the JaCoCo gate (line ≥ 80%, branch ≥ 70%). It also ships an opt-in **`kind-smoke`** job: run it from **Actions → CI → Run workflow → `run-kind-smoke=true`**. The job installs helm/kind/kubeconform/kubectl on `ubuntu-latest`, builds `vykronis/runtime:local` + the 8 `vykronis/<service>:local` images via compose, installs the chart on a fresh kind cluster, and asserts all pods reach `Ready` (equivalent to the manual demo below). On failure it uploads the kind node logs.
 
 ## What's not in this runbook (stretch only)
 - Terraform for kind cluster provisioning
