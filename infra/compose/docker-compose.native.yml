@@ -1,11 +1,12 @@
 # Vykronis — GHCR binary demo overlay.
 #
-# Swaps the four core services' local JVM images for the binaries published to
-# GHCR by the `native` workflow (public, anonymous pull). NOTE (2026-09-12):
-# the currently-published `:native` tags are still JVM images (native build
-# misconfigured - now fixed, re-dispatch pending); once re-published they will
-# be true GraalVM binaries. The rest of the stack (Postgres / Kafka / Redis and
-# the other four JVM apps) runs exactly as in the daily compose loop.
+# Swaps the four core services' local JVM images for the true GraalVM native
+# binaries published to GHCR by the `native` workflow (public, anonymous pull,
+# dispatch 34709798539 / 32ea577 - all four green). Real measured footprint:
+# policy 177 MB/0.088 s/~55 MiB, api-gateway 202 MB/0.163 s/~73 MiB,
+# event 300 MB/1.258 s/~103 MiB, agent 310 MB/0.172 s/~88 MiB (details in
+# docs/NATIVE.md "Measured numbers"). The rest of the stack (Postgres / Kafka /
+# Redis and the other four JVM apps) runs exactly as in the daily compose loop.
 #
 # Usage (from the repo root):
 #   docker compose -f infra/compose/docker-compose.yml \
@@ -19,8 +20,9 @@ services:
   api-gateway:
     image: ghcr.io/sreelekha-22/vykronis/api-gateway:native
     build: null
-    # OTLP exporters use protobuf reflection with no GraalVM metadata yet, so
-    # native binaries disable them (JVM images in apps.yml keep full OTLP).
+    # OTLP exporters need protobuf reflection; the ExtensionRegistry hints are
+    # registered, so these disables are only defensive noise reduction
+    # (JVM images in apps.yml keep full OTLP).
     environment:
       MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false"
       MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: "false"
