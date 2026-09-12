@@ -1,19 +1,12 @@
 # GraalVM Native (Tier 2)
 
-> **Correction (2026-09-12):** the GHCR images currently tagged `:native`
-> are **not** native binaries — they are ordinary JVM images. `docker image
-> inspect` build metadata shows BellSoft Liberica JRE + `java ... JarLauncher`
-> as the `web` process and no `native-image` buildpack. Root cause: the build
-> step ran `spring-boot:build-image -Dspring-boot.build-image.nativeImage=true`
-> **without activating the `native` profile**, so Spring AOT (`process-aot`)
-> never ran, the buildpack had no AOT classes and silently built a JVM image
-> (the distroless-tiny run base's lack of a shell was a red herring that
-> masked this). Fixed (2026-09-12): the native profile now sets
-> `<extensions>true</extensions>` on `native-maven-plugin` (hooks AOT into
-> `package`) and the workflow passes `-P native`; verified locally that
-> `package` now embeds `*__ApplicationContextInitializer` / `*__BeanFactoryRegistrations`
-> AOT classes. The metrics table below is therefore **JVM** performance until a
-> corrected dispatch produces and measures real native binaries.
+> **Status (2026-09-12):** real native binaries are built and measured. Built
+> via `spring-boot:build-image -P native` (Spring AOT engaged through the
+> `native` profile's `<extensions>true</extensions>`); all four native images are
+> on GHCR as `ghcr.io/sreelekha-22/vykronis/<svc>:native` and each service's
+> Gradle -free smoke reports `/actuator/health` UP. The 2026-09-12 "JVM not
+> native" correction is resolved — the `Measured numbers` section below is now
+> the real native build (dispatch `34709798539` / `32ea577`).
 
 ## What
 
@@ -61,28 +54,37 @@ check of the generated `reachability-metadata.json` before spending CI minutes.
 
 ## Measured numbers
 
-Four-service native matrix; binaries on GHCR as
-`ghcr.io/sreelekha-22/vykronis/<svc>:native`.
+Real native binaries; smoke on 16GB `ubuntu-latest` (dispatch `34709798539`,
+commit `32ea577`). image size = `docker image inspect .Size` `numfmt --to=iec`;
+boot = `Started … in N seconds`; RSS = `docker stats` container memory.
 
-| service | image size (GHCR) | boot time (16GB runner) | memory (approx) |
-|---|---|---|---|
-| policy-service | 153.4 MB (146.3 MiB) | **2.862 s** | 257.8 MiB* |
-| api-gateway | 159.9 MB (152.5 MiB) | **3.495 s** | 310.4 MiB* |
-| agent-orchestrator | 216.0 MB (206.0 MiB) | **3.505 s** | 340.2 MiB* |
-| event-service | 188.2 MB (179.5 MiB) | **5.740 s** | 355.8 MiB* |
+| service | image size | boot time | RSS (approx) | native-image build peak |
+|---|---|---|---|---|
+| policy-service | **177 MB** | **0.088 s** | **~55 MiB** | 5.55 GB / ~4 min |
+| api-gateway | **202 MB** | **0.163 s** | **~73 MiB** | 5.74 GB / ~4 min |
+| event-service | **300 MB** | **1.258 s** | **~103 MiB** | 11.12 GB / ~6 min |
+| agent-orchestrator | **310 MB** | **0.172 s** | **~88 MiB** | 10.92 GB / ~8 min |
 
-Boot = the `Started … in N seconds` line from each job log (all four from the
-4-matrix dispatch `34693808237` / `06fc143`). Memory = cgroup usage via
-`docker stats` on the same GHCR binaries locally.
+All four smoke UP. event-service smoke boots an ephemeral Postgres container
+(needed by design); event/agent disable the Kafka health contributor so a
+missing broker doesn't flip health DOWN.
 
-Size = uncompressed layer total from `docker manifest inspect` (matches
-`docker image inspect .Size` locally). The job-summary image sizes (e.g.
-"358M"/"395M") are the build machine's own `{{.Size}}` quirk, not the pushed
-artifact. The job-summary "container RSS (approx)" printed `runtime kB` on the
-shell-less buildpack image (`docker exec … sh` fails) — the workflow now drops
-the exec attempt and always takes `docker stats`, so future dispatches report
-runner-side memory cleanly. *= memory from `docker stats` (cgroup usage) on the
-same binaries.
+## App-level reachability metadata
+
+Spring Boot's AOT toolchain **overwrites** `META-INF/native-image/<groupId>/<artifactId>/reachability-metadata.json`
+with its own generated file, silently dropping hand-authored hints at the same
+coords. App-level hints therefore live under `META-INF/native-image/io.vykronis/<service>-native-hints/reachability-metadata.json`
+(non-clobbered coords, applied by native-image discovery) and use the object
+schema this GraalVM accepts — class descriptors keyed by `"type"`, resources
+by `"glob"`:
+
+- hibernate-validator typed loggers (`Log_$logger`, `Messages_$bundle`) — all
+  native services
+- `com.google.protobuf.ExtensionRegistry[Lite]` — reflective `getEmptyRegistry`
+  in the OTLP exporter path
+- `org.hibernate.dialect.PostgreSQLDialect` — event-service (reflective dialect
+  instantiation)
+- `schema/*.json` glob — agent-orchestrator (JSON Schema validation resource)
 
 ## Caveats
 
