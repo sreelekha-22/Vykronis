@@ -44,16 +44,32 @@ check of the generated `reachability-metadata.json` before spending CI minutes.
 
 ## Measured numbers
 
-Filled in from `native-report.txt` after the first matrix dispatch.
+Measured from the actual GHCR binaries pulled to the local Docker engine
+(2026-09-12, first matrix dispatch = successful run `34687630947` / `a72c794`).
+Boot = `Started <App> in … seconds` from container logs; memory = the container's
+cgroup usage via `docker stats` (the buildpack image is shell-less, so
+`/proc/1` VmRSS via `docker exec` isn't available — cgroup usage is the honest
+equivalent). These are local-host numbers (busy dev laptop), so they are an
+upper bound for boot; the runner-side equivalents live in each job's summary /
+`native-report.txt` artifact.
 
-| service | image size | boot time | container RSS (approx) |
+| service | image size | boot time | container memory (approx) |
 |---|---|---|---|
-| policy-service | TBD | TBD | TBD |
-| api-gateway | TBD | TBD | TBD |
+| policy-service | 146.3 MB | 14.049 s | 257.8 MiB |
+| api-gateway | 152.5 MB | 21.982 s | 310.4 MiB |
+
+Headline vs the AOT JVM (same host): policy `14.0s` native vs `6.2s` JVM-AOT
+boot, gateway `21.9s` vs `9.5s` — this host's Docker/WSL VM loads skew cold
+starts, and the JVM path already got the AppCDS/jlink squeeze in Tier 1. The
+native win here is steady-state footprint single-binary distribution (no JDK,
+no runtime image), not boot on a loaded 8GB laptop; the 16GB-runner job
+summaries are the fair numbers.
 
 ## Caveats
 
-- Container RSS from `/proc/1/status` VmRSS is approximate (page cache included).
+- The buildpack native image ships **no shell** (`docker exec … sh` fails), so
+  memory is measured via the container's cgroup usage (`docker stats`) instead of
+  `/proc/1` VmRSS — same ballpark, page cache included.
 - `api-gateway` (WebFlux/Netty) is the expected native-hiccup case; if its CI
   smoke red-flags, reachability tweaks go under `META-INF/native-image/...`.
 - Out of scope this sprint: `event-service` / `agent-orchestrator` (JPA/OpenSearch/
