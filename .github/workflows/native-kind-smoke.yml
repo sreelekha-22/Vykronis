@@ -72,6 +72,13 @@ jobs:
           chmod +x mvnw
           ./mvnw --batch-mode -pl libs/common -am install -DskipTests
           ./mvnw --batch-mode -pl libs/common test -Dhelm.smoke.kind=true
+          # Hard-fail on a silent skip so a false-green can't happen again.
+          if grep -q 'name="kindSmokeDeploysChartAndPodsReady".*<skipped' \
+            libs/common/target/surefire-reports/TEST-io.vykronis.helm.HelmChartSmokeTest.xml; then
+            echo "::error::kind smoke was SKIPPED - the demo did not run (cluster/images/property problem)"
+            exit 1
+          fi
+          cat libs/common/target/surefire-reports/io.vykronis.helm.HelmChartSmokeTest.txt
 
       - name: Publish smoke summary
         run: |
