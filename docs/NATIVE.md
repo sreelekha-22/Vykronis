@@ -53,6 +53,13 @@ binaries live on GHCR as `ghcr.io/sreelekha-22/vykronis/<svc>:native`.
 |---|---|---|---|
 | policy-service | 153.4 MB (146.3 MiB) | **2.182 s** | 257.8 MiB* |
 | api-gateway | 159.9 MB (152.5 MiB) | **3.536 s** | 310.4 MiB* |
+| agent-orchestrator | 216.0 MB (206.0 MiB) | TBD† | 340.2 MiB* |
+| event-service | 188.2 MB (179.5 MiB) | TBD† | 355.8 MiB* |
+
+† Runner-side boot for the two widened services comes from the job summaries of
+the 4-matrix dispatch (`06fc143` / run `34693808237`); locally on the busy 8GB
+host their native cold boots were 39.5s / 60.8s (upper bound — the same host
+measured policy/gateway at 14s/22s vs their 2.2s/3.5s on the runner).
 
 Size = uncompressed layer total from `docker manifest inspect` (the pushed
 image; `docker image inspect .Size` locally = same number). The job summary
