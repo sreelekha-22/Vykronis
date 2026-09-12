@@ -72,6 +72,8 @@ jobs:
           fi
           docker run -d --name "$NAME" $INFRANET $DBARGS \
             -e SERVER_PORT=8085 -e MANAGEMENT_SERVER_PORT=8081 \
+            -e MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED=false \
+            -e MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED=false \
             -p 18085:8085 -p 18081:8081 \
             vykronis/${{ matrix.service }}:native
           ok=0
