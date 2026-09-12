@@ -1,5 +1,20 @@
 # GraalVM Native (Tier 2)
 
+> **Correction (2026-09-12):** the GHCR images currently tagged `:native`
+> are **not** native binaries — they are ordinary JVM images. `docker image
+> inspect` build metadata shows BellSoft Liberica JRE + `java ... JarLauncher`
+> as the `web` process and no `native-image` buildpack. Root cause: the build
+> step ran `spring-boot:build-image -Dspring-boot.build-image.nativeImage=true`
+> **without activating the `native` profile**, so Spring AOT (`process-aot`)
+> never ran, the buildpack had no AOT classes and silently built a JVM image
+> (the distroless-tiny run base's lack of a shell was a red herring that
+> masked this). Fixed (2026-09-12): the native profile now sets
+> `<extensions>true</extensions>` on `native-maven-plugin` (hooks AOT into
+> `package`) and the workflow passes `-P native`; verified locally that
+> `package` now embeds `*__ApplicationContextInitializer` / `*__BeanFactoryRegistrations`
+> AOT classes. The metrics table below is therefore **JVM** performance until a
+> corrected dispatch produces and measures real native binaries.
+
 ## What
 
 Each service can be compiled into a self-contained native binary via Spring AOT +
@@ -29,7 +44,7 @@ Matrix (grows over time):
 Per service the job:
 
 1. `./mvnw -pl platform/<svc> -am install -DskipTests` (jar + reactor deps)
-2. `spring-boot:build-image -Dspring-boot.build-image.nativeImage=true` (Boot buildpack)
+2. `./mvnw -P native -pl platform/<svc> spring-boot:build-image -Dspring-boot.build-image.nativeImage=true` (Boot buildpack, AOT jar)
 3. pushes `ghcr.io/sreelekha-22/vykronis/<svc>:native` (public packages are free)
 4. `docker run` -> asserts `/actuator/health` UP -> measures image size, boot time, RSS
 5. uploads `native-report.txt` and writes the metrics table to the job summary

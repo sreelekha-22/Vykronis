@@ -42,7 +42,7 @@ jobs:
       - name: Native image via Spring Boot buildpack
         run: |
           chmod +x mvnw
-          ./mvnw --batch-mode -pl platform/${{ matrix.service }} spring-boot:build-image \
+          ./mvnw --batch-mode -P native -pl platform/${{ matrix.service }} spring-boot:build-image \
             -Dspring-boot.build-image.imageName=vykronis/${{ matrix.service }}:native \
             -Dspring-boot.build-image.nativeImage=true \
             -DskipTests
