@@ -2,23 +2,23 @@
   "comment": "Vykronis app-level native hints (non-AOT-generated coords)",
   "reflection": [
     {
-      "name": "org.hibernate.validator.internal.util.logging.Log_$logger",
+      "type": "org.hibernate.validator.internal.util.logging.Log_$logger",
       "allDeclaredConstructors": true,
       "allDeclaredMethods": true
     },
     {
-      "name": "org.hibernate.validator.internal.util.logging.Messages_$bundle",
+      "type": "org.hibernate.validator.internal.util.logging.Messages_$bundle",
       "allDeclaredConstructors": true,
       "allDeclaredFields": true,
       "allDeclaredMethods": true
     },
     {
-      "name": "com.google.protobuf.ExtensionRegistry",
+      "type": "com.google.protobuf.ExtensionRegistry",
       "allDeclaredConstructors": true,
       "allDeclaredMethods": true
     },
     {
-      "name": "com.google.protobuf.ExtensionRegistryLite",
+      "type": "com.google.protobuf.ExtensionRegistryLite",
       "allDeclaredConstructors": true,
       "allDeclaredMethods": true
     }
