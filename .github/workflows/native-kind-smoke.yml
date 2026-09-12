@@ -72,13 +72,21 @@ jobs:
           chmod +x mvnw
           ./mvnw --batch-mode -pl libs/common -am install -DskipTests
           ./mvnw --batch-mode -pl libs/common test -Dhelm.smoke.kind=true
-          # Hard-fail on a silent skip so a false-green can't happen again.
-          if grep -q 'name="kindSmokeDeploysChartAndPodsReady".*<skipped' \
-            libs/common/target/surefire-reports/TEST-io.vykronis.helm.HelmChartSmokeTest.xml; then
-            echo "::error::kind smoke was SKIPPED - the demo did not run (cluster/images/property problem)"
-            exit 1
-          fi
-          cat libs/common/target/surefire-reports/io.vykronis.helm.HelmChartSmokeTest.txt
+          # Hard-fail on a silent skip so a false-green can't happen again, and
+          # dump the surefire XML so the skip reason is always visible.
+          python3 - "$PWD/libs/common/target/surefire-reports/TEST-io.vykronis.helm.HelmChartSmokeTest.xml" <<'EOF'
+import sys
+import xml.etree.ElementTree as ET
+t = ET.parse(sys.argv[1]).getroot()
+for tc in t.iter("testcase"):
+    if tc.get("name") == "kindSmokeDeploysChartAndPodsReady" and tc.find("skipped") is not None:
+        sk = tc.find("skipped")
+        detail = (sk.text or "").strip().splitlines()
+        print("::error::kind smoke SKIPPED:", detail[0] if detail else "(no reason)")
+        sys.exit(1)
+print("kind smoke ran (not skipped)")
+EOF
+          cat libs/common/target/surefire-reports/TEST-io.vykronis.helm.HelmChartSmokeTest.xml
 
       - name: Publish smoke summary
         run: |

@@ -170,7 +170,25 @@ class HelmChartSmokeTest {
 
     private static boolean isToolAvailable(String name) {
         // Most tools answer `<tool> version`; kubeconform answers `<tool> -v`.
-        return tryVersion(name, "version") || tryVersion(name, "-v");
+        // A PATH lookup closes the gap where the tool is present but its version
+        // invocation fails (e.g. `kubectl version` exits non-zero with no cluster).
+        return tryVersion(name, "version") || tryVersion(name, "-v") || onPath(name);
+    }
+
+    private static boolean onPath(String name) {
+        String path = System.getenv("PATH");
+        if (path == null || path.isBlank()) {
+            return false;
+        }
+        for (String dir : path.split(File.pathSeparator)) {
+            if (dir.isBlank()) {
+                continue;
+            }
+            if (new File(dir, name).canExecute()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean tryVersion(String name, String flag) {
