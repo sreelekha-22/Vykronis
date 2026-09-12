@@ -19,6 +19,10 @@ jobs:
             appclass: PolicyServiceApplication
           - service: api-gateway
             appclass: ApiGatewayApplication
+          - service: event-service
+            appclass: EventServiceApplication
+          - service: agent-orchestrator
+            appclass: AgentOrchestratorApplication
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -53,7 +57,20 @@ jobs:
       - name: Smoke + measure the native image (health UP, size, boot, RSS)
         run: |
           NAME=${{ matrix.service }}-native-smoke
-          docker run -d --name "$NAME" \
+          INFRANET=""
+          DBARGS=""
+          if [ "${{ matrix.service }}" = "event-service" ]; then
+            docker network create smoke-${{ matrix.service }} || true
+            docker run -d --rm --network smoke-${{ matrix.service }} --name evt-pg \
+              -e POSTGRES_DB=vykronis -e POSTGRES_USER=vykronis -e POSTGRES_PASSWORD=vykronis \
+              postgres:16-alpine
+            INFRANET="--network smoke-${{ matrix.service }}"
+            DBARGS="-e VYKRONIS_DB_URL=jdbc:postgresql://evt-pg:5432/vykronis -e VYKRONIS_DB_USER=vykronis -e VYKRONIS_DB_PASSWORD=vykronis -e SPRING_KAFKA_LISTENER_AUTO_STARTUP=false"
+          fi
+          if [ "${{ matrix.service }}" = "agent-orchestrator" ] || [ "${{ matrix.service }}" = "event-service" ]; then
+            DBARGS="$DBARGS -e MANAGEMENT_HEALTH_KAFKA_ENABLED=false"
+          fi
+          docker run -d --name "$NAME" $INFRANET $DBARGS \
             -e SERVER_PORT=8085 -e MANAGEMENT_SERVER_PORT=8081 \
             -p 18085:8085 -p 18081:8081 \
             vykronis/${{ matrix.service }}:native
@@ -72,6 +89,10 @@ jobs:
             echo "::error::native smoke failed for ${{ matrix.service }}"
             docker logs "$NAME"
             docker rm -f "$NAME"
+            if [ "${{ matrix.service }}" = "event-service" ]; then
+              docker rm -f evt-pg || true
+              docker network rm smoke-${{ matrix.service }} || true
+            fi
             exit 1
           fi
           BOOT=$(docker logs "$NAME" 2>/dev/null | grep -oE "Started ${{ matrix.appclass }} in [0-9.]+ seconds" | tail -1)
@@ -99,6 +120,10 @@ jobs:
           echo "--- native report (${{ matrix.service }}) ---"
           cat native-report.txt
           docker rm -f "$NAME"
+          if [ "${{ matrix.service }}" = "event-service" ]; then
+            docker rm -f evt-pg || true
+            docker network rm smoke-${{ matrix.service }} || true
+          fi
 
       - name: Upload native report
         uses: actions/upload-artifact@v5

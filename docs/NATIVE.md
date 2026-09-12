@@ -23,6 +23,8 @@ Matrix (grows over time):
 |---|---|---|---|
 | policy-service | `vykronis/policy-service:native` | yes | 6.224s |
 | api-gateway | `vykronis/api-gateway:native` | yes | 9.484s |
+| event-service | `vykronis/event-service:native` | yes | 21.974s (with Postgres) |
+| agent-orchestrator | `vykronis/agent-orchestrator:native` | yes | 8.107s |
 
 Per service the job:
 
@@ -69,5 +71,8 @@ buildpack image is shell-less — fixed in `6e0431a` (falls back to
   `/proc/1` VmRSS — same ballpark, page cache included.
 - `api-gateway` (WebFlux/Netty) is the expected native-hiccup case; if its CI
   smoke red-flags, reachability tweaks go under `META-INF/native-image/...`.
-- Out of scope this sprint: `event-service` / `agent-orchestrator` (JPA/OpenSearch/
-  Kafka reachability).
+- Out of scope this sprint (native still untested): none — policy, gateway, event,
+  orchestrator are all in the matrix. `event-service`'s smoke boots an ephemeral
+  Postgres container (it needs a DB by design) + disables the Kafka health
+  contributor; `agent-orchestrator`/`event-service` both disable the Kafka health
+  contributor so a missing broker doesn't flip health to DOWN.
