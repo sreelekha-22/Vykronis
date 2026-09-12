@@ -1,0 +1,33 @@
+[
+  {
+    "type": "reflect",
+    "name": "org.hibernate.validator.internal.util.logging.Log_$logger",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "type": "reflect",
+    "name": "org.hibernate.validator.internal.util.logging.Messages_$bundle",
+    "allDeclaredConstructors": true,
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "type": "reflect",
+    "name": "com.google.protobuf.ExtensionRegistry",
+    "methods": [
+      { "name": "getEmptyRegistry", "parameterTypes": [] }
+    ]
+  },
+  {
+    "type": "reflect",
+    "name": "com.google.protobuf.ExtensionRegistryLite",
+    "methods": [
+      { "name": "getEmptyRegistry", "parameterTypes": [] }
+    ]
+  },
+  {
+    "type": "resource",
+    "pattern": "schema/.*\\.json"
+  }
+]
