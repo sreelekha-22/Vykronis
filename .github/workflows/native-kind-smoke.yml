@@ -1,0 +1,99 @@
+# Vykronis — full-stack kind smoke with the four NATIVE cores.
+#
+# Pulls the true GraalVM native images already published to GHCR by the
+# `native` workflow (must be run once first; images are public/anonymous),
+# re-tags them as vykronis/<svc>:local (the exact tag HelmChartSmokeTest and
+# the helm chart expect), builds only the four remaining JVM support services
+# (ingestion, correlation, incident, remediation), loads all eight into a fresh
+# kind cluster, installs the chart, and asserts every pod reaches Ready.
+# On failure the cluster is left behind and kind logs are uploaded.
+#
+# Usage (one click, no inputs):
+#   Actions -> native-kind-smoke -> Run workflow
+name: native-kind-smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  native-kind-smoke:
+    name: Native kind smoke (4 native cores + 4 JVM, pods Ready)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+
+      - name: Install helm, kind, kubeconform, kubectl
+        run: |
+          set -eux
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          KIND="$(curl -fsSL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | grep -m1 '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')"
+          curl -fsSLo kind "https://kind.sigs.k8s.io/dl/v${KIND}/kind-linux-amd64"
+          sudo install kind /usr/local/bin/kind
+          rm kind
+          KC="$(curl -fsSL https://api.github.com/repos/yannh/kubeconform/releases/latest | grep -m1 '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')"
+          curl -fsSLo kubeconform.tar.gz "https://github.com/yannh/kubeconform/releases/download/v${KC}/kubeconform-linux-amd64.tar.gz"
+          tar xzf kubeconform.tar.gz -C /tmp
+          sudo install /tmp/kubeconform /usr/local/bin/kubeconform
+          rm kubeconform.tar.gz
+          KUBE="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
+          curl -fsSLo kubectl "https://dl.k8s.io/release/${KUBE}/bin/linux/amd64/kubectl"
+          sudo install kubectl /usr/local/bin/kubectl
+          rm kubectl
+
+      - name: Pull published native cores, retag as vykronis/<svc>:local
+        run: |
+          set -eux
+          for svc in api-gateway event-service agent-orchestrator policy-service; do
+            docker pull ghcr.io/${GITHUB_REPOSITORY_OWNER}/vykronis/${svc}:native
+            docker tag ghcr.io/${GITHUB_REPOSITORY_OWNER}/vykronis/${svc}:native vykronis/${svc}:local
+          done
+          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep ':native\|vykronis/.*:local' || true
+
+      - name: Build runtime + remaining JVM services (vykronis/<svc>:local)
+        run: |
+          docker build -f infra/docker/runtime.Dockerfile -t vykronis/runtime:local .
+          docker compose -f infra/compose/docker-compose.apps.yml --profile apps build \
+            ingestion-service correlation-engine incident-service remediation-service
+
+      - name: Kind smoke (-Dhelm.smoke.kind=true)
+        run: |
+          chmod +x mvnw
+          ./mvnw --batch-mode -pl libs/common -am install -DskipTests
+          ./mvnw --batch-mode -pl libs/common test -Dhelm.smoke.kind=true
+
+      - name: Publish smoke summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ### native-kind-smoke
+
+          Pulled native cores (retagged \`vykronis/<svc>:local\` for the chart) and built the
+          4 JVM support services; HelmChartSmokeTest created cluster \`vykronis-smoke\`, installed
+          the chart, and waited for all pods \`Ready\`. The four core services are the real
+          GraalVM binaries from \`ghcr.io/${GITHUB_REPOSITORY_OWNER}/vykronis/<svc>:native\`;
+          measured numbers live in \`docs/NATIVE.md\`.
+          EOF
+
+      - name: Upload kind logs
+        if: failure()
+        run: |
+          kind export logs --name vykronis-smoke kind-logs || true
+          true
+
+      - name: Upload logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: native-kind-smoke-logs
+          path: kind-logs
+          retention-days: 7

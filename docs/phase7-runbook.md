@@ -180,6 +180,8 @@ The GitHub Actions workflow (Phase 7 Unit 3) runs the full reactor on `ubuntu-la
 
 A GraalVM **`native`** workflow (Tier 2) is standalone: **Actions → native → Run workflow** (single click, no inputs) builds native binaries via the Spring Boot buildpack (16 GB runner; the 8 GB host laptop can't run `native-image`) for the **matrix** `policy-service`, `api-gateway`, `event-service`, and `agent-orchestrator` into `vykronis/<svc>:native`, pushes them to GHCR (`ghcr.io/sreelekha-22/vykronis/<svc>:native`), runs each, and asserts `/actuator/health` is `UP` — also reporting image size, boot time, and an approximate container RSS into the job summary and a `native-report.txt` artifact. All four services carry the `native` Maven profile; AOT hint generation is verified locally via `./mvnw -pl platform/<svc> -Pnative spring-boot:process-aot` + an AOT JVM boot. Measured numbers (policy 177 MB/0.088 s/~55 MiB, api-gateway 202 MB/0.163 s/~73 MiB, event-service 300 MB/1.258 s/~103 MiB, agent-orchestrator 310 MB/0.172 s/~88 MiB) are in **`docs/NATIVE.md`**.
 
+A companion **`native-kind-smoke`** workflow (also one click, no inputs) runs the *full* demo stack with the native cores: it pulls the published `:native` images from GHCR, builds only the four JVM support services, loads all eight `vykronis/<svc>:local` images into a fresh `vykronis-smoke` kind cluster, installs the chart, and asserts all pods `Ready` — the "real binaries, real stack" end-to-end demo. Requires the `native` workflow to have run at least once (images on GHCR).
+
 ## What's not in this runbook (stretch only)
 - Terraform for kind cluster provisioning
 - k6 load script (the platform is not a load generator)

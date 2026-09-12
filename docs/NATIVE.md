@@ -69,6 +69,25 @@ All four smoke UP. event-service smoke boots an ephemeral Postgres container
 (needed by design); event/agent disable the Kafka health contributor so a
 missing broker doesn't flip health DOWN.
 
+## Full-stack demo in kind (native cores)
+
+**Actions -> native-kind-smoke -> Run workflow** (single click, no inputs)
+wraps the four native cores into the real demo stack instead of smoke containers:
+
+1. pulls the published `ghcr.io/sreelekha-22/vykronis/<svc>:native` images
+   (anonymous, public) and re-tags them `vykronis/<svc>:local`
+2. builds the four remaining JVM support services (ingestion, correlation,
+   incident, remediation) from `infra/compose/docker-compose.apps.yml`
+3. loads all eight into a fresh `vykronis-smoke` kind cluster, installs the
+   helm chart, and waits for every pod `Ready` (`-Dhelm.smoke.kind=true`)
+
+Because the native binaries compile in the same `server.port` values as their
+JVM twins, the chart's probes (8080/8082/8085/8086) and ClusterIP services map
+1:1. Kafka + Postgres are real Deployments/StatefulSets, so the native
+event/agent Kafka health contributors come up naturally (no DISABLE envs).
+Requires the `native` workflow to have been run at least once so the images
+exist on GHCR. On failure the cluster is preserved and kind logs are uploaded.
+
 ## App-level reachability metadata
 
 Spring Boot's AOT toolchain **overwrites** `META-INF/native-image/<groupId>/<artifactId>/reachability-metadata.json`
