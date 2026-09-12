@@ -16,34 +16,31 @@
 #   docker stats   # watch the four containers' memory
 name: vykronis
 
+# OTLP exporters need protobuf reflection; the ExtensionRegistry hints are
+# registered, so these disables are only defensive noise reduction
+# (JVM images in apps.yml keep full OTLP).
+x-native-otlp: &native-otlp
+  environment:
+    MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false"
+    MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: "false"
+
 services:
   api-gateway:
     image: ghcr.io/sreelekha-22/vykronis/api-gateway:native
     build: null
-    # OTLP exporters need protobuf reflection; the ExtensionRegistry hints are
-    # registered, so these disables are only defensive noise reduction
-    # (JVM images in apps.yml keep full OTLP).
-    environment:
-      MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false"
-      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: "false"
+    <<: *native-otlp
 
   event-service:
     image: ghcr.io/sreelekha-22/vykronis/event-service:native
     build: null
-    environment:
-      MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false"
-      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: "false"
+    <<: *native-otlp
 
   agent-orchestrator:
     image: ghcr.io/sreelekha-22/vykronis/agent-orchestrator:native
     build: null
-    environment:
-      MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false"
-      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: "false"
+    <<: *native-otlp
 
   policy-service:
     image: ghcr.io/sreelekha-22/vykronis/policy-service:native
     build: null
-    environment:
-      MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false"
-      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: "false"
+    <<: *native-otlp
