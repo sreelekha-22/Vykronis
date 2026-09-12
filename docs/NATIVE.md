@@ -46,30 +46,28 @@ check of the generated `reachability-metadata.json` before spending CI minutes.
 
 ## Measured numbers
 
-First matrix dispatch (`34687630947`, sha `a72c794`): both jobs **success**;
-binaries live on GHCR as `ghcr.io/sreelekha-22/vykronis/<svc>:native`.
+Four-service native matrix; binaries on GHCR as
+`ghcr.io/sreelekha-22/vykronis/<svc>:native`.
 
 | service | image size (GHCR) | boot time (16GB runner) | memory (approx) |
 |---|---|---|---|
-| policy-service | 153.4 MB (146.3 MiB) | **2.182 s** | 257.8 MiB* |
-| api-gateway | 159.9 MB (152.5 MiB) | **3.536 s** | 310.4 MiB* |
-| agent-orchestrator | 216.0 MB (206.0 MiB) | TBD† | 340.2 MiB* |
-| event-service | 188.2 MB (179.5 MiB) | TBD† | 355.8 MiB* |
+| policy-service | 153.4 MB (146.3 MiB) | **2.862 s** | 257.8 MiB* |
+| api-gateway | 159.9 MB (152.5 MiB) | **3.495 s** | 310.4 MiB* |
+| agent-orchestrator | 216.0 MB (206.0 MiB) | **3.505 s** | 340.2 MiB* |
+| event-service | 188.2 MB (179.5 MiB) | **5.740 s** | 355.8 MiB* |
 
-† Runner-side boot for the two widened services comes from the job summaries of
-the 4-matrix dispatch (`06fc143` / run `34693808237`); locally on the busy 8GB
-host their native cold boots were 39.5s / 60.8s (upper bound — the same host
-measured policy/gateway at 14s/22s vs their 2.2s/3.5s on the runner).
+Boot = the `Started … in N seconds` line from each job log (all four from the
+4-matrix dispatch `34693808237` / `06fc143`). Memory = cgroup usage via
+`docker stats` on the same GHCR binaries locally.
 
-Size = uncompressed layer total from `docker manifest inspect` (the pushed
-image; `docker image inspect .Size` locally = same number). The job summary
-reported "358M"/"367M" — that's the build machine's own `{{.Size}}` quirk, not
-the published artifact. Boot = CI-runner log line (`Started … in N seconds`) —
-the real win vs typical JVM cold start. *= cgroup usage via `docker stats`
-measured locally the same day; that run's "container RSS (approx)" came out as
-`runtime kB` because the a72c794 script used `docker exec … sh` and the
-buildpack image is shell-less — fixed in `6e0431a` (falls back to
-`docker stats`), so the next dispatch will report runner-side memory cleanly.
+Size = uncompressed layer total from `docker manifest inspect` (matches
+`docker image inspect .Size` locally). The job-summary image sizes (e.g.
+"358M"/"395M") are the build machine's own `{{.Size}}` quirk, not the pushed
+artifact. The job-summary "container RSS (approx)" printed `runtime kB` on the
+shell-less buildpack image (`docker exec … sh` fails) — the workflow now drops
+the exec attempt and always takes `docker stats`, so future dispatches report
+runner-side memory cleanly. *= memory from `docker stats` (cgroup usage) on the
+same binaries.
 
 ## Caveats
 

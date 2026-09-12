@@ -97,10 +97,7 @@ jobs:
           fi
           BOOT=$(docker logs "$NAME" 2>/dev/null | grep -oE "Started ${{ matrix.appclass }} in [0-9.]+ seconds" | tail -1)
           SIZE=$(docker image inspect vykronis/${{ matrix.service }}:native --format '{{.Size}}' | numfmt --to=iec)
-          RSS=$(docker exec "$NAME" sh -c 'grep VmRSS /proc/1/status' 2>/dev/null | awk '{print $2 " kB"}')
-          if [ -z "$RSS" ]; then
-            RSS=$(docker stats --no-stream --format '{{.MemUsage}}' "$NAME" 2>/dev/null | sed -E 's#/[0-9.]+[A-Za-z]+$##')
-          fi
+          RSS=$(docker stats --no-stream --format '{{.MemUsage}}' "$NAME" 2>/dev/null | sed -E 's#/[0-9.]+[A-Za-z]+$##')
           RSS=${RSS:-n/a}
           {
             echo "### ${{ matrix.service }} (native)"
