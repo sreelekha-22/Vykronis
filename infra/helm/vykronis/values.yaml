@@ -75,6 +75,7 @@ postgres:
 kafka:
   image: apache/kafka:3.8.0
   port: 9092
+  controllerPort: 9093
   heapOpts: -Xms64M -Xmx256M -XX:MaxMetaspaceSize=96m
   resources:
     requests:

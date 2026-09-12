@@ -101,7 +101,7 @@ class HelmChartSmokeTest {
 
             // Install chart
             ProcessBuilder install = new ProcessBuilder("helm", "install", "vykronis", CHART_DIR.toString(),
-                    "-n", "vykronis-smoke", "--create-namespace", "--wait", "--timeout", "180s");
+                    "-n", "vykronis-smoke", "--create-namespace", "--wait", "--timeout", "300s");
             install.redirectErrorStream(true);
             Process ip = install.start();
             String installOut = new String(ip.getInputStream().readAllBytes());

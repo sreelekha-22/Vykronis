@@ -23,6 +23,9 @@ spec:
             - name: kafka
               containerPort: {{ .Values.kafka.port }}
               protocol: TCP
+            - name: controller
+              containerPort: {{ .Values.kafka.controllerPort }}
+              protocol: TCP
           env:
             - name: CLUSTER_ID
               value: vykronis-demo-cluster-id-0001
@@ -78,4 +81,8 @@ spec:
     - name: kafka
       port: {{ .Values.kafka.port }}
       targetPort: kafka
+      protocol: TCP
+    - name: controller
+      port: {{ .Values.kafka.controllerPort }}
+      targetPort: controller
       protocol: TCP
