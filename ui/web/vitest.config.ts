@@ -12,12 +12,6 @@ export default defineConfig({
   },
   test: {
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
-    poolTimeout: 60000,
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
