@@ -25,7 +25,13 @@
   ],
   "resources": [
     {
-      "pattern": "schema/.*\\.json"
+      "glob": "/"
+    },
+    {
+      "glob": "schema/"
+    },
+    {
+      "glob": "schema/hypothesis.schema.json"
     }
   ]
 }

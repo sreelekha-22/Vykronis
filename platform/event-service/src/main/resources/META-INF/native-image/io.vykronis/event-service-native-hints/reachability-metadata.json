@@ -21,6 +21,11 @@
       "type": "com.google.protobuf.ExtensionRegistryLite",
       "allDeclaredConstructors": true,
       "allDeclaredMethods": true
+    },
+    {
+      "type": "org.hibernate.dialect.PostgreSQLDialect",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true
     }
   ]
 }
