@@ -21,9 +21,11 @@ RUN jlink \
     --output /opt/vykronis-jre
 
 # Runtime stage: keep the glibc / certs / tz skeleton of the base image but
-# drop the bundled full JRE, leaving only the slim jlink runtime.
+# drop the bundled full JRE, leaving only the slim jlink runtime. The current
+# eclipse-temurin:25-jre ship has no /usr/lib/jvm and no /usr/bin/java, so do
+# the cleanup by target match (-lname) rather than comparing readlinks.
 FROM eclipse-temurin:25-jre
 COPY --from=jdk /opt/vykronis-jre /opt/vykronis-jre
 RUN rm -rf /opt/java/openjdk /usr/lib/jvm \
-    && find /usr/bin -maxdepth 1 -type l -exec sh -c 'for f; do [ "$(readlink "$f")" = "/opt/java/openjdk/bin/$(basename "$f")" ] && rm "$f"; done' sh {} +
+    && find /usr/bin -maxdepth 1 -type l -lname '/opt/java/openjdk/*' -delete
 ENV PATH=/opt/vykronis-jre/bin:$PATH
