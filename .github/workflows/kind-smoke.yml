@@ -39,7 +39,8 @@ jobs:
       - name: Build runtime + service images (vykronis/<service>:local)
         run: |
           docker build -f infra/docker/runtime.Dockerfile -t vykronis/runtime:local .
-          docker compose -f infra/compose/docker-compose.apps.yml build
+          docker compose -f infra/compose/docker-compose.yml \
+            -f infra/compose/docker-compose.apps.yml --profile apps build
 
       - name: Kind smoke (-Dhelm.smoke.kind=true)
         run: |
