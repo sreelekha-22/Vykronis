@@ -15,7 +15,7 @@ and hint generation are cheap and run on the host JVM.
 
 ## Build
 
-Opt-in dispatch: **Actions -> CI -> Run workflow -> `run-native=true`**.
+Dispatch: **Actions -> native -> Run workflow** (single click, no inputs).
 
 Matrix (grows over time):
 

@@ -1,0 +1,62 @@
+name: kind-smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  kind-smoke:
+    name: Kind smoke (chart install, pods Ready)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Install helm, kind, kubeconform, kubectl
+        run: |
+          set -eux
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          KIND="$(curl -fsSL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | grep -m1 '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')"
+          curl -fsSLo kind "https://kind.sigs.k8s.io/dl/v${KIND}/kind-linux-amd64"
+          sudo install kind /usr/local/bin/kind
+          rm kind
+          KC="$(curl -fsSL https://api.github.com/repos/yannh/kubeconform/releases/latest | grep -m1 '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')"
+          curl -fsSLo kubeconform.tar.gz "https://github.com/yannh/kubeconform/releases/download/v${KC}/kubeconform-linux-amd64.tar.gz"
+          tar xzf kubeconform.tar.gz -C /tmp
+          sudo install /tmp/kubeconform /usr/local/bin/kubeconform
+          rm kubeconform.tar.gz
+          KUBE="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
+          curl -fsSLo kubectl "https://dl.k8s.io/release/${KUBE}/bin/linux/amd64/kubectl"
+          sudo install kubectl /usr/local/bin/kubectl
+          rm kubectl
+
+      - name: Build runtime + service images (vykronis/<service>:local)
+        run: |
+          docker build -f infra/docker/runtime.Dockerfile -t vykronis/runtime:local .
+          docker compose -f infra/compose/docker-compose.apps.yml build
+
+      - name: Kind smoke (-Dhelm.smoke.kind=true)
+        run: |
+          chmod +x mvnw
+          ./mvnw --batch-mode -pl libs/common -am install -DskipTests
+          ./mvnw --batch-mode -pl libs/common test -Dhelm.smoke.kind=true
+
+      - name: Upload kind logs
+        if: failure()
+        run: |
+          kind export logs --name vykronis-smoke kind-logs || true
+          true
+
+      - name: Upload logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kind-smoke-logs
+          path: kind-logs
+          retention-days: 7

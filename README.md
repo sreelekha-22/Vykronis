@@ -111,8 +111,8 @@ docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compo
 ```
 
 > Compose builds the app images as `vykronis/<service>:local` — the same tag the
-> Helm/kind demo (Phase 7) and CI's kind smoke (`Actions → CI → Run workflow`,
-> `run-kind-smoke=true`) consume, so one `docker compose build` serves both paths.
+> Helm/kind demo (Phase 7) and CI's kind smoke (`Actions → kind-smoke → Run workflow`)
+> consume, so one `docker compose build` serves both paths.
 > To run the live cluster smoke locally: `./mvnw -pl libs/common test -Dhelm.smoke.kind=true`
 > (it reuses the `vykronis-smoke` kind cluster).
 
