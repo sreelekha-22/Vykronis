@@ -64,8 +64,21 @@ jobs:
             docker run -d --rm --network smoke-${{ matrix.service }} --name evt-pg \
               -e POSTGRES_DB=vykronis -e POSTGRES_USER=vykronis -e POSTGRES_PASSWORD=vykronis \
               postgres:16-alpine
+            for i in $(seq 1 60); do
+              if docker exec evt-pg pg_isready -U vykronis -d vykronis >/dev/null 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+            if ! docker exec evt-pg pg_isready -U vykronis -d vykronis >/dev/null 2>&1; then
+              echo "::error::evt-pg did not become ready within 60s"
+              docker logs evt-pg 2>&1 | tail -20
+              docker rm -f evt-pg || true
+              docker network rm smoke-${{ matrix.service }} || true
+              exit 1
+            fi
             INFRANET="--network smoke-${{ matrix.service }}"
-            DBARGS="-e VYKRONIS_DB_URL=jdbc:postgresql://evt-pg:5432/vykronis -e VYKRONIS_DB_USER=vykronis -e VYKRONIS_DB_PASSWORD=vykronis -e SPRING_KAFKA_LISTENER_AUTO_STARTUP=false"
+            DBARGS="-e VYKRONIS_DB_URL=jdbc:postgresql://evt-pg:5432/vykronis -e VYKRONIS_DB_USER=vykronis -e VYKRONIS_DB_PASSWORD=vykronis -e SPRING_KAFKA_LISTENER_AUTO_STARTUP=false -e SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT=60000"
           fi
           if [ "${{ matrix.service }}" = "agent-orchestrator" ] || [ "${{ matrix.service }}" = "event-service" ]; then
             DBARGS="$DBARGS -e MANAGEMENT_HEALTH_KAFKA_ENABLED=false"
