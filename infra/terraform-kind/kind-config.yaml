@@ -1,0 +1,24 @@
+# Local kind cluster used by the Phase 7 runbook/demo. Same shape the runbook
+# creates via heredoc, promoted to a version-controlled file so Terraform,
+# `kind create cluster --config`, and docs share one source of truth.
+#
+# kubeadm patches KubeletExtraArgs instead of --node-labels on the CLI so the
+# demo's `kubectl get nodes -l` queries stay deterministic after cluster
+# upgrades; worker labels are plain node labels (no kubeadm patch needed).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: vykronis
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "vykronis.io/node-type=control-plane"
+  - role: worker
+    labels:
+      vykronis.io/node-type: worker
+  - role: worker
+    labels:
+      vykronis.io/node-type: worker

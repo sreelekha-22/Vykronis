@@ -32,6 +32,7 @@
         <module>platform/agent-orchestrator</module>
         <module>platform/policy-service</module>
         <module>platform/remediation-service</module>
+    <module>platform/schema-registry</module>
     </modules>
 
     <properties>

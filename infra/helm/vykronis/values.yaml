@@ -31,6 +31,8 @@ services:
     port: 8086
   - name: remediation-service
     port: 8087
+  - name: schema-registry
+    port: 8090
 
 probes:
   livenessPath: /actuator/health/liveness

@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "title": "Vykronis: pod-kill resilience of event-service",
+  "description": "Kills the event-service pod in the vykronis namespace and asserts the platform self-heals: the Deployment (strategy Recreate) must come back Available, and the agent-orchestrator deployment — the target KubernetesExecutor rollouts run against — stays healthy so the incident-remediation loop still works after the blast. Complements the platform's own agentic self-healing (remediation-service rollout restart/undo) by testing the infrastructure-level recovery beneath it.",
+  "tags": ["vykronis", "kubernetes", "pod-kill", "resilience"],
+  "steady-state-hypothesis": {
+    "title": "The event pipeline stays healthy",
+    "probes": [
+      {
+        "type": "probe",
+        "name": "event-service-deployment-available",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "chaosk8s.probes",
+          "func": "microservice_available_and_healthy",
+          "arguments": {
+            "name": "event-service"
+          }
+        }
+      },
+      {
+        "type": "probe",
+        "name": "agent-orchestrator-deployment-available",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "chaosk8s.probes",
+          "func": "microservice_available_and_healthy",
+          "arguments": {
+            "name": "agent-orchestrator"
+          }
+        }
+      }
+    ]
+  },
+  "method": [
+    {
+      "type": "action",
+      "name": "kill-one-event-service-pod",
+      "provider": {
+        "type": "python",
+        "module": "chaosk8s.pod.actions",
+        "func": "terminate_pods",
+        "arguments": {
+          "label_selector": "vykronis.io/service=event-service",
+          "name_pattern": "event-service-.*",
+          "rand": true
+        }
+      },
+      "pauses": {
+        "after": 10
+      }
+    }
+  ],
+  "rollbacks": [],
+  "duration": 180,
+  "configuration": {
+    "chaos.k8s.namespace": "vykronis"
+  },
+  "secrets": {}
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "io.vykronis.contracts.remediation-event.schema.json",
+  "title": "ObsRemediationEvent",
+  "description": "Remediation traffic on obs.remediation is shared by two records (1 partition): RemediationCommand (issued by incident-service, keyed by commandId) and RemediationResult (emitted by remediation-service when the executor finishes). The schema is a oneOf over both shapes.",
+  "type": "object",
+  "oneOf": [
+    {
+      "title": "RemediationCommand",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commandId", "incidentId", "action", "serviceId", "environment", "issuedAt", "subject"],
+      "properties": {
+        "commandId": { "type": "string", "format": "uuid" },
+        "incidentId": { "type": "string" },
+        "action": { "enum": ["ROLLBACK", "RESTART"] },
+        "serviceId": { "type": "string" },
+        "environment": { "enum": ["DEV", "PROD"] },
+        "targetVersion": { "type": ["string", "null"] },
+        "issuedAt": { "type": "string", "format": "date-time" },
+        "subject": { "type": ["string", "null"] }
+      }
+    },
+    {
+      "title": "RemediationResult",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resultId", "commandId", "incidentId", "outcome", "detail", "completedAt"],
+      "properties": {
+        "resultId": { "type": "string", "format": "uuid" },
+        "commandId": { "type": "string", "format": "uuid" },
+        "incidentId": { "type": "string" },
+        "outcome": { "enum": ["COMPLETED", "FAILED"] },
+        "detail": { "type": "string" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  ]
+}

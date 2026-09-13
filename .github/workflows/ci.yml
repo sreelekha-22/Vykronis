@@ -77,9 +77,38 @@ jobs:
           path: ui/web/coverage/
           retention-days: 7
 
+  extensions:
+    name: Platform Extensions (terraform fmt/validate + k6 + chaos JSON)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.9.0
+
+      - name: Terraform fmt check
+        working-directory: infra/terraform-kind
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init + validate
+        working-directory: infra/terraform-kind
+        run: |
+          terraform init -backend=false -input=false -no-color
+          terraform validate -no-color
+
+      - name: k6 script syntax check
+        run: |
+          docker run --rm -v "${GITHUB_WORKSPACE}/tools/k6:/scripts" grafana/k6 inspect /scripts/load.js
+
+      - name: Chaos experiment JSON validity
+        run: python -m json.tool tools/chaos/experiment.json > /dev/null
+
   notify:
     name: Status Summary
-    needs: [build-test, ui]
+    needs: [build-test, ui, extensions]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -87,7 +116,8 @@ jobs:
         run: |
           echo "Build matrix: ${{ needs.build-test.result }}"
           echo "UI: ${{ needs.ui.result }}"
-          if [[ "${{ needs.build-test.result }}" != "success" || "${{ needs.ui.result }}" != "success" ]]; then
+          echo "Extensions: ${{ needs.extensions.result }}"
+          if [[ "${{ needs.build-test.result }}" != "success" || "${{ needs.ui.result }}" != "success" || "${{ needs.extensions.result }}" != "success" ]]; then
             echo "::error::One or more jobs failed"
             exit 1
           fi

@@ -141,7 +141,8 @@ class HelmChartSmokeTest {
     private static int loadChartImages(String cluster) throws Exception {
         String[] services = {
                 "api-gateway", "ingestion-service", "event-service", "correlation-engine",
-                "incident-service", "agent-orchestrator", "policy-service", "remediation-service"
+                "incident-service", "agent-orchestrator", "policy-service", "remediation-service",
+                "schema-registry"
         };
         int loaded = 0;
         for (String svc : services) {

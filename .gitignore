@@ -43,6 +43,13 @@ infra/compose/grafana/data/
 infra/compose/prometheus/data/
 infra/compose/opensearch/data/
 
+# ---- Terraform (kind demo cluster IaC) ----
+infra/terraform-kind/.terraform/
+infra/terraform-kind/*.tfstate
+infra/terraform-kind/*.tfstate.*
+infra/terraform-kind/.terraform.lock.hcl
+crash.log
+
 # ---- OS ----
 .DS_Store
 Thumbs.db

@@ -182,11 +182,40 @@ A GraalVM **`native`** workflow (Tier 2) is standalone: **Actions → native →
 
 A companion **`native-kind-smoke`** workflow (also one click, no inputs) runs the *full* demo stack with the native cores: it pulls the published `:native` images from GHCR, builds only the four JVM support services, loads all eight `vykronis/<svc>:local` images into a fresh `vykronis-smoke` kind cluster, installs the chart, and asserts all pods `Ready` — the "real binaries, real stack" end-to-end demo. Requires the `native` workflow to have run at least once (images on GHCR). **Verified green** (run 34744784527): all pods `Ready` in ~181 s, `Tests run: 3, Failures: 0, Skipped: 0`; the smoke hard-fails if the test is skipped (surefire XML grep) so a green = a real cluster run, not a silent skip.
 
-## What's not in this runbook (stretch only)
-- Terraform for kind cluster provisioning
-- k6 load script (the platform is not a load generator)
-- Pod kill / chaos injection (the remediation loop *is* the self-healing demo)
-- Schema Registry (contracts use JSON, not Avro/Proto)
+## Platform extensions (former stretch items, now implemented)
+The four former stretch items are first-class, opt-in artifacts in this repo
+(validated on every CI push):
+
+- **Terraform for kind** — `infra/terraform-kind/` provisions the exact demo
+  cluster declaratively (`apply` creates, `destroy` deletes). `kind-config.yaml`
+  there is now the single source of truth for the node shape; the quickstart
+  above can use `kind create cluster --config
+  infra/terraform-kind/kind-config.yaml`. Requires Terraform ≥ 1.4 + kind.
+- **k6 load generator** — `tools/k6/load.js` drives the *real* HTTP ingest path
+  (`POST /api/ingest/events`, plus deployment events via the orchestrator demo
+  endpoint) with healthy-then-burst metric traffic, so a 60–90 s run produces a
+  genuine correlation-engine incident. Run standalone
+  (`INGEST_URL=http://localhost:8081 ORCH_URL=http://localhost:8085 k6 run
+  tools/k6/load.js`) or via the `load` compose overlay
+  (`infra/compose/docker-compose.load.yml`).
+- **Pod-kill chaos** — `tools/chaos/experiment.json` (Chaos Toolkit) kills a
+  random `event-service` pod (`vykronis.io/service=event-service`) and asserts
+  both `event-service` and `agent-orchestrator` deployments return `Available`
+  — infrastructure-level recovery beneath the platform's own agentic
+  self-healing (KubernetesExecutor rollout restart/undo). Run `tools/chaos/run.sh` (or `.ps1`).
+- **Schema Registry** — `platform/schema-registry` (9th, opt-in service: JVM
+  build, `services`-list entry in the chart — it does not take part in the
+  native matrix) stores versioned JSON Schemas for all five event topics
+  (`obs.metrics`, `obs.deployments`, `obs.alerts`, `obs.remediation`,
+  `obs.jfr`; contracts live in `contracts/src/main/resources/schema/`, the two
+  new `remediation-event`/`jfr-record` schemas cover the remaining topics) and
+  exposes `GET/POST /contracts/**` + `POST /contracts/{topic}/validate` (draft
+  2020-12 via networknt) on port 8090 — JSON contracts, no Avro/Proto
+  dependency. Reachable in-cluster via `kubectl -n vykronis port-forward
+  svc/schema-registry 8090:8090`.
+
+These stay additive: the core 15-step demo, all four workflows, and the two kind
+smokes are unchanged in behavior.
 
 ---
 

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "io.vykronis.contracts.jfr-record.schema.json",
+  "title": "JfrRecord",
+  "description": "A JFR recording chunk emitted onto obs.jfr (partitioned by serviceId; ordering per service is preserved). content is the binary JFR chunk, base64-encoded by Jackson's default byte[] handling.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "serviceId", "env", "fileName", "content", "recordedAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "serviceId": { "type": "string" },
+    "env": { "enum": ["DEV", "PROD"] },
+    "fileName": { "type": "string", "pattern": "^[A-Za-z0-9._-]+\\.jfr$" },
+    "content": { "type": "string", "pattern": "^[A-Za-z0-9+/=]+$" },
+    "recordedAt": { "type": "string", "format": "date-time" }
+  }
+}

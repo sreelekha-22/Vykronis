@@ -115,3 +115,14 @@ services:
     environment:
       <<: *common-otel
     profiles: ["apps"]
+
+  schema-registry:
+    image: vykronis/schema-registry:local
+    build:
+      context: ../..
+      dockerfile: platform/schema-registry/Dockerfile
+    ports:
+      - "8090:8090"
+    environment:
+      <<: *common-otel
+    profiles: ["apps"]
