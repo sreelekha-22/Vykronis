@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, getEvidence, getIncident, investigateIncident } from '@/lib/api';
+import {
+  ApiError,
+  approveRemediation,
+  getEvidence,
+  getIncident,
+  investigateIncident,
+  requestRemediation,
+} from '@/lib/api';
 import type { Hypothesis, IncidentSummary } from '@/lib/types';
 
 const ok = (body: unknown): Response =>
@@ -146,5 +153,90 @@ describe('api client', () => {
     stubFetch(new Response('{ "status": 409 }', { status: 409 }));
 
     await expect(investigateIncident('inc-1')).rejects.toEqual(expect.any(ApiError));
+  });
+
+  it('falls back to defaults for a sparse incident DTO', async () => {
+    stubFetch(ok({ hypothesis: null }));
+
+    const result = await getIncident('inc-sparse');
+
+    expect(result.incidentId).toBe('unknown');
+    expect(result.serviceId).toBe('unknown');
+    expect(result.severity).toBe('unknown');
+    expect(result.status).toBe('UNKNOWN');
+    expect(result.hypothesis).toBeUndefined();
+    expect(result.detectedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('maps a partial hypothesis and tolerates non-array evidence', async () => {
+    stubFetch(
+      ok({
+        hypothesis: { statement: 'statement-only', evidence: 'not-an-array' },
+      }),
+    );
+
+    const result = await getIncident('inc-hypothesis');
+
+    expect(result.hypothesis?.statement).toBe('statement-only');
+    expect(result.hypothesis?.confidence).toBeUndefined();
+    expect(result.hypothesis?.summary).toBeUndefined();
+    expect(result.hypothesis?.source).toBeUndefined();
+    expect(result.hypothesis?.evidence).toEqual([]);
+  });
+
+  it('maps a primitive hypothesis to undefined', async () => {
+    stubFetch(ok({ hypothesis: 'plain-string' }));
+
+    const result = await getIncident('inc-primitive');
+
+    expect(result.hypothesis).toBeUndefined();
+  });
+
+  it('uses the current time when the incident has no detectedAt for the window', async () => {
+    stubFetch(ok([]));
+    const before = Date.now();
+
+    const { from, to } = await getEvidence({ incidentId: 'x', serviceId: 'pay' } as IncidentSummary);
+
+    expect(new Date(from).getTime()).toBeGreaterThanOrEqual(before - 3_700_000);
+    expect(new Date(to).getTime()).toBeGreaterThanOrEqual(before + 3_600_000);
+  });
+
+  it('maps sparse search hits onto evidence defaults', async () => {
+    stubFetch(ok([{}, { traceId: 'tr-9' }, { eventId: 'e', source: 'src' }]));
+
+    const { items } = await getEvidence({
+      detectedAt: '2026-09-03T10:00:00Z',
+      serviceId: 'pay',
+    } as IncidentSummary);
+
+    expect(items[0].eventId).toBe('unknown');
+    expect(items[0].source).toBe('unknown');
+    expect(items[0].serviceId).toBe('unknown');
+    expect(items[0].env).toBe('unknown');
+    expect(items[0].type).toBe('UNKNOWN');
+    expect(items[0].timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(items[0].status).toBeUndefined();
+    expect(items[0].payload).toBeUndefined();
+    expect(items[1].traceId).toBe('tr-9');
+    expect(items[2].eventId).toBe('e');
+    expect(items[2].source).toBe('src');
+  });
+
+  it('sends the operator subject body and a null subject for remediation flows', async () => {
+    const firstMock = stubFetch(ok({ status: 'REQUESTED' }));
+
+    await requestRemediation('inc-1', { name: 'ops', roles: ['approver'] });
+    const first = firstMock.mock.calls[0];
+    expect(String(first[0])).toContain('/remediation');
+    expect(JSON.parse(String(first[1]?.body))).toEqual({
+      subject: { name: 'ops', roles: ['approver'] },
+    });
+
+    const secondMock = stubFetch(ok({ status: 'APPROVED' }));
+    await approveRemediation('inc-1');
+    const second = secondMock.mock.calls[0];
+    expect(String(second[0])).toContain('/approve');
+    expect(JSON.parse(String(second[1]?.body))).toEqual({ subject: null });
   });
 });

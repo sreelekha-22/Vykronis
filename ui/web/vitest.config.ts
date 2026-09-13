@@ -16,5 +16,15 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     include: ['**/*.test.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      thresholds: {
+        lines: 80,
+        statements: 90,
+        functions: 90,
+        branches: 70,
+      },
+    },
   },
 });
+
