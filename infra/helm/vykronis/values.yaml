@@ -22,6 +22,7 @@ services:
     port: 8082
   - name: correlation-engine
     port: 8083
+    topicsInit: true
   - name: incident-service
     port: 8084
   - name: agent-orchestrator

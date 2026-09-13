@@ -19,6 +19,22 @@ spec:
       labels:
         {{- include "vykronis.selectorLabels" (dict "Chart" $.Chart "Release" $.Release "service" .name) | nindent 8 }}
     spec:
+      {{- if .topicsInit }}
+      initContainers:
+        - name: kafka-topics-init
+          image: {{ $.Values.kafka.image | quote }}
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              BOOTSTRAP={{ $.Values.vykronis.kafka.bootstrap | quote }}
+              until /opt/kafka/bin/kafka-topics.sh --bootstrap-server "$BOOTSTRAP" --list >/dev/null 2>&1; do sleep 2; done
+              for t in obs.metrics:3 obs.deployments:3 obs.alerts:3 obs.remediation:1 obs.jfr:1; do
+                name=${t%%:*}; parts=${t##*:}
+                /opt/kafka/bin/kafka-topics.sh --bootstrap-server "$BOOTSTRAP" \
+                  --create --if-not-exists --topic "$name" --partitions "$parts" --replication-factor 1 || true
+              done
+      {{- end }}
       containers:
         - name: {{ .name }}
           image: "{{ $.Values.image.repository }}/{{ .name }}:{{ $.Values.image.tag }}"
@@ -40,6 +56,8 @@ spec:
               value: {{ $.Values.vykronis.db.username | quote }}
             - name: VYKRONIS_DB_PASSWORD
               value: {{ $.Values.vykronis.db.password | quote }}
+            - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+              value: "60000"
           startupProbe:
             httpGet:
               path: {{ $.Values.probes.livenessPath }}
