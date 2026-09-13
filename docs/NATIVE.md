@@ -88,6 +88,29 @@ event/agent Kafka health contributors come up naturally (no DISABLE envs).
 Requires the `native` workflow to have been run at least once so the images
 exist on GHCR. On failure the cluster is preserved and kind logs are uploaded.
 
+### Delivered: end-to-end green (run 34744784527, commit a5292d1)
+
+Verified GREEN: real binaries, real stack, all pods `Ready` in ~181 s
+(`Tests run: 3, Failures: 0, Skipped: 0`), job total 4m40s, cluster auto-torn
+down on success. The fixes that made the real cluster converge:
+
+- **kafka KRaft in-cluster deadlock** — broker↔controller handshaking through
+  the kube Service is a self-deadlock (not-Ready pods get no endpoints), so the
+  controller quorum voter is `1@localhost:9093` (in-pod self-connect) with the
+  client listener still advertised as `PLAINTEXT://kafka:9092`; single-broker
+  defaults (`KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1`, `MIN_ISR=1`,
+  `TRANSACTION_STATE_LOG_*`)
+- **global-table topics pre-created** — Kafka Streams' `GlobalKTable` input must
+  exist with partitions before the eager streams start; correlation-engine runs
+  a `kafka-topics-init` initContainer that waits for kafka and idempotently
+  creates `obs.metrics/deployments/alerts` (3 partitions) and
+  `obs.remediation/jfr` (1)
+- **postgres startup race** — Hikari fail-fast aborted JVM services on a transient
+  `UnknownHostException: postgres`; `SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT=60000`
+  makes every deployment wait out the DNS/DB race instead of dying
+- **event-service bootstrap** — reads `spring.kafka.bootstrap-servers` (its
+  `application.properties` key), not the legacy `kafka.bootstrap-servers`
+
 ## App-level reachability metadata
 
 Spring Boot's AOT toolchain **overwrites** `META-INF/native-image/<groupId>/<artifactId>/reachability-metadata.json`
