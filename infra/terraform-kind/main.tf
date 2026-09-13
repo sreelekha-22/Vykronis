@@ -15,11 +15,11 @@ resource "null_resource" "kind_cluster" {
   }
 
   provisioner "local-exec" {
-    command = "kind create cluster --name \"${var.cluster_name}\" --config \"${local.config_path}\" --wait \"${var.kind_wait}\" ${var.extra_kind_args}"
+    command = "kind create cluster --name \"${self.triggers.cluster_name}\" --config \"${local.config_path}\" --wait \"${var.kind_wait}\" ${var.extra_kind_args}"
   }
 
   provisioner "local-exec" {
     when    = destroy
-    command = "kind delete cluster --name \"${var.cluster_name}\""
+    command = "kind delete cluster --name \"${self.triggers.cluster_name}\""
   }
 }
