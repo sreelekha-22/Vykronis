@@ -7,7 +7,7 @@ variable "cluster_name" {
 variable "config_path" {
   type        = string
   default     = null
-  description = "Path to the kind cluster config; defaults to ${path.module}/kind-config.yaml."
+  description = "Path to the kind cluster config. When null, kind-config.yaml in this directory (next to main.tf) is used."
 }
 
 variable "kind_wait" {
