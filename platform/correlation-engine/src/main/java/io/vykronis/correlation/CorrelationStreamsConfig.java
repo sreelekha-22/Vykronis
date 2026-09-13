@@ -4,6 +4,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
 
 import java.util.HashMap;
@@ -23,7 +24,7 @@ public class CorrelationStreamsConfig {
     @Value("${spring.application.name:correlation-engine}")
     private String appId;
 
-    @Bean
+    @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
     public KafkaStreamsConfiguration kafkaStreamsConfiguration(
             @Value("${kafka.bootstrap-servers:localhost:9092}") String bootstrapServers) {
         Map<String, Object> props = new HashMap<>();
