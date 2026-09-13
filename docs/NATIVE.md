@@ -60,10 +60,10 @@ boot = `Started … in N seconds`; RSS = `docker stats` container memory.
 
 | service | image size | boot time | RSS (approx) | native-image build peak |
 |---|---|---|---|---|
-| policy-service | **177 MB** | **0.088 s** | **~55 MiB** | 5.55 GB / ~4 min |
-| api-gateway | **202 MB** | **0.163 s** | **~73 MiB** | 5.74 GB / ~4 min |
-| event-service | **300 MB** | **1.258 s** | **~103 MiB** | 11.12 GB / ~6 min |
-| agent-orchestrator | **310 MB** | **0.172 s** | **~88 MiB** | 10.92 GB / ~8 min |
+| policy-service | **177 MB** | **0.081 s** | **~55 MiB** | 5.55 GB / ~4 min |
+| api-gateway | **203 MB** | **0.142 s** | **~74 MiB** | 5.74 GB / ~4 min |
+| event-service | **300 MB** | **0.172 s** | **~91 MiB** | 11.12 GB / ~6 min |
+| agent-orchestrator | **310 MB** | **0.184 s** | **~88 MiB** | 10.92 GB / ~8 min |
 
 All four smoke UP. event-service smoke boots an ephemeral Postgres container
 (needed by design); event/agent disable the Kafka health contributor so a
@@ -76,9 +76,9 @@ wraps the four native cores into the real demo stack instead of smoke containers
 
 1. pulls the published `ghcr.io/sreelekha-22/vykronis/<svc>:native` images
    (anonymous, public) and re-tags them `vykronis/<svc>:local`
-2. builds the four remaining JVM support services (ingestion, correlation,
-   incident, remediation) from `infra/compose/docker-compose.apps.yml`
-3. loads all eight into a fresh `vykronis-smoke` kind cluster, installs the
+2. builds the five remaining JVM support services (ingestion, correlation,
+   incident, remediation, schema-registry) from `infra/compose/docker-compose.apps.yml`
+3. loads all nine into a fresh `vykronis-smoke` kind cluster, installs the
    helm chart, and waits for every pod `Ready` (`-Dhelm.smoke.kind=true`)
 
 Because the native binaries compile in the same `server.port` values as their
