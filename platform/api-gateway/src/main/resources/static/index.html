@@ -49,10 +49,10 @@
                         const card = document.createElement('div');
                         card.className = `incident-card status-${incident.status.toLowerCase()}`;
                         card.innerHTML = `
-                            <h3 class="incident-title">${incident.title || incident.incident_id}</h3>
-                            <p>Service: ${incident.service_id}</p>
+                            <h3 class="incident-title">${incident.title || incident.incidentId}</h3>
+                            <p>Service: ${incident.serviceId}</p>
                             <p>Severity: ${incident.severity}</p>
-                            <p>Detected: ${incident.detected_at ? new Date(incident.detected_at).toLocaleString() : 'N/A'}</p>
+                            <p>Detected: ${incident.detectedAt ? new Date(incident.detectedAt).toLocaleString() : 'N/A'}</p>
                             <p>Status: ${incident.status}</p>
                         `;
                         container.appendChild(card);

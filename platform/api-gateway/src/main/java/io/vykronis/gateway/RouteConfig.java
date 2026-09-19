@@ -12,7 +12,9 @@ public class RouteConfig {
     public RouteLocator gatewayRoutes(RouteLocatorBuilder builder) {
         return builder.routes()
             .route("incident-service", r -> r.path("/api/incidents/**")
-                .uri("lb://incident-service"))
+                .uri("http://incident-service:8084"))
+            .route("event-service", r -> r.path("/api/search/**")
+                .uri("http://event-service:8082"))
             .build();
     }
 }

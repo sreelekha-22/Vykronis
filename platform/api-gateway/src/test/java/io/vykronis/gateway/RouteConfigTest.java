@@ -45,8 +45,21 @@ class RouteConfigTest {
                 .findFirst()
                 .orElseThrow();
         URI uri = incidentRoute.getUri();
-        assertThat(uri.getScheme()).isEqualTo("lb");
+        assertThat(uri.getScheme()).isEqualTo("http");
         assertThat(uri.getHost()).isEqualTo("incident-service");
+    }
+
+    @Test
+    void eventServiceRouteMatchesSearchPathAndPointsToEventService() {
+        Route searchRoute = routes().stream()
+                .filter(r -> matches(r, "/api/search/events"))
+                .findFirst()
+                .orElseThrow();
+        URI uri = searchRoute.getUri();
+        assertThat(uri.getScheme()).isEqualTo("http");
+        assertThat(uri.getHost()).isEqualTo("event-service");
+        assertThat(matches(searchRoute, "/api/incidents/123")).isFalse();
+        assertThat(matches(searchRoute, "/api/ingest/events")).isFalse();
     }
 
     @Test
