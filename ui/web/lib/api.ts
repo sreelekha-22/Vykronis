@@ -155,7 +155,7 @@ export async function investigateIncident(incidentId: string): Promise<Hypothesi
   return jsonRequest(`/api/incidents/${incidentId}/investigate`, { method: 'POST' }) as Promise<Hypothesis>;
 }
 
-export const DEMO_OPERATOR: OperatorSubject = { name: 'ops', roles: ['approver'], service: false };
+export const DEMO_OPERATOR: OperatorSubject = { name: 'ops', roles: ['vykronis-approver'], service: false };
 
 function operatorBody(subject: OperatorSubject | undefined): string {
   return JSON.stringify({ subject: subject ?? null });

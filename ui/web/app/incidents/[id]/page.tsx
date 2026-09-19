@@ -2,6 +2,7 @@ import { InvestigatePanel } from '@/components/InvestigatePanel';
 import { RemediationPanel } from '@/components/RemediationPanel';
 import { Timeline } from '@/components/Timeline';
 import { ApiError, DEMO_OPERATOR, getEvidence, getIncident } from '@/lib/api';
+import type { EvidenceItem } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,19 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
     }
     throw error;
   }
-  const { items, from, to } = await getEvidence(incident);
+  let items: EvidenceItem[] = [];
+  let from = '';
+  let to = '';
+  try {
+    const evidence = await getEvidence(incident);
+    items = evidence.items;
+    from = evidence.from;
+    to = evidence.to;
+  } catch {
+    const detected = new Date(incident.detectedAt);
+    from = new Date(detected.getTime() - 3600_000).toISOString();
+    to = new Date(detected.getTime() + 3600_000).toISOString();
+  }
 
   return (
     <main>
