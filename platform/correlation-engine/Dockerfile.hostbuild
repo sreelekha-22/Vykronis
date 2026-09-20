@@ -1,0 +1,9 @@
+# One-off host-built image: jar compiled on the Windows host by Maven
+# (which has real RAM), then copied onto the shared runtime base.
+# Usage: docker build -f platform/correlation-engine/Dockerfile.hostbuild \
+#        -t vykronis/correlation-engine:local .  (from repo root)
+FROM vykronis/runtime:local
+WORKDIR /app
+COPY build-staging/correlation-app.jar app.jar
+EXPOSE 8083
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

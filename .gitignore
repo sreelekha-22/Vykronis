@@ -36,6 +36,7 @@ ui/web/coverage/
 
 # ---- Workspace backup (never commit) ----
 original_pom.xml
+build-staging/
 
 # ---- Observability local data ----
 data/

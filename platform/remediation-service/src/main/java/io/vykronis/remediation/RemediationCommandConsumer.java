@@ -28,7 +28,8 @@ public class RemediationCommandConsumer {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    @KafkaListener(topics = Topics.REMEDIATION, groupId = "remediation-service")
+    @KafkaListener(topics = Topics.REMEDIATION, groupId = "${vykronis.remediation.group-id:remediation-service}",
+            containerFactory = "remediationCommandListenerContainerFactory")
     public void onCommand(RemediationCommand command) {
         if (command == null) {
             return;

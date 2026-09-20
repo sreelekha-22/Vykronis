@@ -1,0 +1,21 @@
+# One-off host-built image for the remediation executor: the jar is compiled
+# on the Windows host (real RAM), then copied onto the shared slim runtime
+# together with the docker CLI + compose plugin from download.docker.com /
+# GitHub releases (staged in build-staging/ by the operator). The executor
+# shells out to `docker compose` against the mounted host docker socket.
+#
+# Usage (from repo root):
+#   docker build -f platform/remediation-service/Dockerfile.hostbuild \
+#                -t vykronis/remediation-service:local .
+FROM vykronis/runtime:local
+WORKDIR /app
+COPY build-staging/remediation-app.jar app.jar
+COPY build-staging/docker-cli.tgz /tmp/docker-cli.tgz
+COPY build-staging/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+RUN mkdir -p /usr/local/bin \
+    && tar -xzf /tmp/docker-cli.tgz -C /tmp docker/docker \
+    && cp /tmp/docker/docker /usr/local/bin/docker \
+    && rm -rf /tmp/docker /tmp/docker-cli.tgz \
+    && chmod +x /usr/local/bin/docker /usr/local/lib/docker/cli-plugins/docker-compose
+EXPOSE 8087
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

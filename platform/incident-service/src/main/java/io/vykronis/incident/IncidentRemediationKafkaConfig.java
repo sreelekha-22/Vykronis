@@ -32,7 +32,9 @@ import java.util.Map;
  * reader has its own container factory bean name (the canonical
  * {@code kafkaListenerContainerFactory} already serves {@code obs.alerts}'s
  * {@link IncidentCandidate}). Non-result records (i.e. the commands on the same
- * topic) fail deserialization and arrive as null, which the consumer skips.</p>
+ * topic) are skipped by the tolerant {@link RemediationResultDeserializer},
+ * which returns null for anything that is not a result and the consumer
+ * skips.</p>
  */
 @Configuration
 public class IncidentRemediationKafkaConfig {
@@ -62,13 +64,8 @@ public class IncidentRemediationKafkaConfig {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "incident-service-remediation");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
-        props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
-        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, RemediationResult.class.getName());
-        props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(),
-                new JsonDeserializer<>(RemediationResult.class, Json.mapper(), false));
+                new RemediationResultDeserializer());
     }
 
     @Bean

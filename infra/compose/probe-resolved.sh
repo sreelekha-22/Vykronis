@@ -1,0 +1,2 @@
+#!/bin/sh
+curl -s --max-time 30 http://incident-service:8084/api/incidents/d328074e-75ab-47f5-b302-1b5584f7a9d3 | grep -oE 'env[^,]{0,20}|policyDecision[^,]*|approvedBy[^,]*|approvedAt[^,]*|status[^,]*|remediationAction[^,]*|remediationOutcome[^,]*|appliedAt[^,]*|resolvedAt[^,]*|serviceId[^,]*'

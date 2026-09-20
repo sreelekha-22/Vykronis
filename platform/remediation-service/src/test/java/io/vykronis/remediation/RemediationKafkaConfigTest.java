@@ -42,7 +42,7 @@ class RemediationKafkaConfigTest {
     void listenerContainerFactoryWrapsTheConsumerFactory() {
         ConsumerFactory<String, RemediationCommand> cf = config.remediationCommandConsumerFactory();
         ConcurrentKafkaListenerContainerFactory<String, RemediationCommand> factory =
-                config.kafkaListenerContainerFactory(cf);
+                config.remediationCommandListenerContainerFactory(cf);
 
         assertThat(factory).isNotNull();
         assertThat(factory.getConsumerFactory()).isSameAs(cf);

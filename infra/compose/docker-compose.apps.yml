@@ -10,9 +10,29 @@ name: vykronis
 x-common-otel: &common-otel
   MANAGEMENT_OTLP_METRICS_EXPORT_URL: http://otel-collector:4318/v1/metrics
   VYKRONIS_OBSERVABILITY_ENV: dev
+  # Every app service talks to the compose project's Kafka (NOT localhost, which
+  # would resolve to the container itself). Two spellings needed: the platform's
+  # own VYKRONIS_KAFKA_BOOTSTRAP (read by kafka.bootstrap-servers in most apps)
+  # AND spring.kafka.bootstrap-servers (read by agent-orchestrator's
+  # DemoKafkaConfig, which does NOT use the VYKRONIS_ prefix).
+  VYKRONIS_KAFKA_BOOTSTRAP: kafka:9092
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  # 9 JVMs must fit in the ~4GB Docker VM alongside Kafka/Postgres/Redis;
+  # without an explicit cap each HotSpot auto-sizes to ~1GB heap and the
+  # whole stack swap-thrashes. 256m x 9 = 2.3GB leaves room for the rest.
+  JAVA_TOOL_OPTIONS: -Xmx256m
+
+x-common-platform: &common-platform
+  <<: *common-otel
+  # Connect to the compose project's Postgres (NOT localhost, which would
+  # resolve to the container itself).
+  VYKRONIS_DB_URL: jdbc:postgresql://postgres:5432/vykronis
+  VYKRONIS_DB_USER: vykronis
+  VYKRONIS_DB_PASSWORD: vykronis
 
 services:
   api-gateway:
+    mem_limit: 512m
     image: vykronis/api-gateway:local
     build:
       context: ../..
@@ -26,6 +46,7 @@ services:
     profiles: ["apps"]
 
   ingestion-service:
+    mem_limit: 512m
     image: vykronis/ingestion-service:local
     build:
       context: ../..
@@ -37,6 +58,7 @@ services:
     profiles: ["apps"]
 
   event-service:
+    mem_limit: 512m
     image: vykronis/event-service:local
     build:
       context: ../..
@@ -44,10 +66,14 @@ services:
     ports:
       - "8082:8082"
     environment:
-      <<: *common-otel
+      <<: *common-platform
+      # Search backend (compose service name, NOT localhost). Started only under
+      # the `search` profile; indexing/search degrades gracefully without it.
+      VYKRONIS_OPENSEARCH_URL: http://opensearch:9200
     profiles: ["apps"]
 
   correlation-engine:
+    mem_limit: 768m
     image: vykronis/correlation-engine:local
     build:
       context: ../..
@@ -55,24 +81,31 @@ services:
     ports:
       - "8083:8083"
     environment:
-      <<: *common-otel
+      <<: *common-platform
+    depends_on:
+      kafka:
+        condition: service_healthy
     profiles: ["apps"]
 
   incident-service:
+    mem_limit: 512m
     image: vykronis/incident-service:local
     build:
       context: ../..
-      dockerfile: platform/incident-service/Dockerfile
+      dockerfile: platform/incident-service/Dockerfile.hostbuild
     ports:
       - "8084:8084"
     environment:
-      <<: *common-otel
+      <<: *common-platform
       # Investigation coordinator the incident-service calls on
       # POST /api/incidents/{id}/investigate (Phase 4 Unit 6).
       VYKRONIS_ORCHESTRATOR_URL: http://agent-orchestrator:8085
+      # Policy evaluation service called on POST .../remediation (Phase 5 Unit 4).
+      VYKRONIS_POLICY_URL: http://policy-service:8086
     profiles: ["apps"]
 
   agent-orchestrator:
+    mem_limit: 512m
     image: vykronis/agent-orchestrator:local
     build:
       context: ../..
@@ -81,6 +114,10 @@ services:
       - "8085:8085"
     environment:
       <<: *common-otel
+      # Activate the DemoRunner fault generator (Step 5): emits a metric every
+      # 500ms onto obs.metrics and injects a payment-service error burst every
+      # 12th cycle. Runs in-process so no extra container / host process.
+      SPRING_PROFILES_ACTIVE: demo-traffic
       # Only the allow-listed incident/event/search endpoints are ever reachable
       # (Phase 4 Unit 2) — everything else is denied by the tool HTTP client.
       VYKRONIS_INCIDENT_URL: http://incident-service:8084
@@ -95,6 +132,7 @@ services:
     profiles: ["apps"]
 
   policy-service:
+    mem_limit: 512m
     image: vykronis/policy-service:local
     build:
       context: ../..
@@ -106,17 +144,43 @@ services:
     profiles: ["apps"]
 
   remediation-service:
+    mem_limit: 512m
     image: vykronis/remediation-service:local
     build:
       context: ../..
-      dockerfile: platform/remediation-service/Dockerfile
+      dockerfile: platform/remediation-service/Dockerfile.hostbuild
     ports:
       - "8087:8087"
+    volumes:
+      # The executor shells out to `docker compose` against the HOST daemon.
+      # Mount the docker socket + the repo (for the compose files) read-only.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../..:/repo:ro
     environment:
-      <<: *common-otel
+      <<: *common-platform
+      # Compose file paths are repo-root-relative INSIDE the /repo mount.
+      # Project name "vykronis" is taken from the `name:` key in this file.
+      VYKRONIS_REMEDIATION_GROUP_ID: remediation-service2
+      REMEDIATION_COMPOSE_FILES: /repo/infra/compose/docker-compose.yml,/repo/infra/compose/docker-compose.apps.yml
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    profiles: ["apps"]
+
+  # The demo's "payment-service": a real compose service so remediation
+  # ROLLBACK/RESTART actually target something (the agent-orchestrator DemoRunner
+  # fabricates its metrics/error bursts; incidents always name this service).
+  payment-service:
+    mem_limit: 64m
+    image: eclipse-temurin:25-jre
+    container_name: vykronis-payment-service
+    command: ["sleep", "infinity"]
     profiles: ["apps"]
 
   schema-registry:
+    mem_limit: 512m
     image: vykronis/schema-registry:local
     build:
       context: ../..
