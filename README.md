@@ -121,3 +121,7 @@ demo/                      sample services producing telemetry
 Core pipeline **functional**: ingest → detect → investigate → policy → human approval →
 remediation command → REMEDIATING, verified live. Remaining deploy steps (Kubernetes/CI,
 AI-provider wiring, full RESOLVED with infra profiles) are documented in `docs/`.
+
+---
+
+© 2026 sreelekha-22. All rights reserved. See [LICENSE](LICENSE).
