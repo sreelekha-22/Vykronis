@@ -36,6 +36,14 @@ Lifecycle of one incident, captured from a live run:
 The state machine is enforced in the incident-service; every transition is persisted in
 PostgreSQL. The demo runner logs each phase with live status polls (see `demo-live.sh`).
 
+Applying that pressure live produces a board like this one — incidents born, investigated,
+human-approved, and remediated against a running stream:
+
+<figure>
+  <img src="docs/screenshots/ui-dashboard.png" alt="Vykronis dashboard showing live incidents across OPEN, REMEDIATING, RESOLVED and FAILED states" width="900">
+  <figcaption>Live dashboard (no mock data): incidents on the board were driven by real telemetry through the full loop.</figcaption>
+</figure>
+
 ## Engineering substance
 
 | Question | What the code actually does |
