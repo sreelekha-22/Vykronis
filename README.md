@@ -1,123 +1,114 @@
-# Vykronis — Autonomous Reliability & Remediation Platform
+# Vykronis — Autonomous Incident Response Platform
 
-**Loop:** Observe → Detect → Investigate → Hypothesize → Propose → Authorize → Execute → Verify → Learn
+**A self-healing operations platform: it detects an anomaly, investigates the root cause with
+a tool-constrained agent, blocks or authorizes every action through a fail-closed policy engine,
+remediates production only with a human approver in the loop, and records what it learned.**
 
-Vykronis is an autonomous operations platform: it ingests observability events, correlates them to surface incidents, uses **tool-constrained AI agents** to investigate root cause, enforces **policy before any action**, and remediates — then **verifies** the problem is gone.
+> Loop: **Observe → Detect → Investigate → Hypothesize → Authorize → Execute → Verify → Learn**
 
-This is **not** a monitoring dashboard and **not** a chatbot. Every technology below has a real, singular job.
+There is a lot of "AI ops" demo-ware out there. This is **not a dashboard, and not a chatbot.**
+It is a working, closed-loop distributed system built on real streaming, real state machines,
+and real policy — and its full loop is demonstrated end-to-end, on a single 8 GB laptop.
+
+---
+
+## Proof it works (pipeline demo, ~1 minute)
+
+```bash
+docker run -d --name probe --network vykronis_default curlimages/curl sleep 1800
+docker cp infra/compose/demo-live.sh probe:/tmp/demo.sh
+docker exec probe sh /tmp/demo.sh
+```
+
+Lifecycle of one incident, captured from a live run:
+
+```
+[burst]  14 PROD error-rate telemetry events injected into ingestion-service
+[OPEN]   correlation-engine windows 60s of telemetry -> detects anomaly
+[investigate] orchestrator tool agent runs incident.detail + evidence.search
+         -> rule-based fallback hypothesis (AI provider absent) -> HYPOTHESIS_READY
+[remediation] policy-service decision matrix (PROD rollback)
+         -> REQUIRE_APPROVAL -> AWAITING_APPROVAL
+[approve] human operator (ops / vykronis-approver) approves
+         -> remediation command published on Kafka -> REMEDIATING
+```
+
+The state machine is enforced in the incident-service; every transition is persisted in
+PostgreSQL. The demo runner logs each phase with live status polls (see `demo-live.sh`).
+
+## Why it isn't a toy
+
+| Question | What the code actually does |
+|---|---|
+| How are incidents born? | `ingestion-service` → Kafka → `correlation-engine` (60s tumbling windows on `error_rate`) |
+| How is root cause found? | `agent-orchestrator` runs a **tool-calling agent** over an allow-listed tool set (`incident.detail`, `evidence.search`); AI provider first, **deterministic rule-based fallback** (slowest-trace attribution) otherwise — it never fabricates evidence |
+| What stops it from wrecking prod? | A **fail-closed decision matrix** in `policy-service`: service-to-service automation is DENIED for PROD; only a named human approver (`vykronis-approver`) can authorize → `REQUIRE_APPROVAL` |
+| Where is the human gate? | `DEFAULT → AWAITING_APPROVAL → approve → REMEDIATING` — a real endpoint, a real actor model, an audit trail |
+| What if infra is missing? | Search degrades to a Postgres fallback; investigation falls back to rules — the pipeline **does not hard-fail** |
+| Does it close the loop? | `RemediationResultConsumer` advances `REMEDIATING → VERIFYING → RESOLVED` and writes to the learn store |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI[Served dashboard UI] --> GW[API Gateway]
+  ING[Ingestion] -->|events| KAFKA[(Kafka bus)]
+  KAFKA --> CORR[Correlation / detect]
+  CORR --> INC[Incident Service {state machine}]
+  INC --> ORCH[Orchestrator tool agent]
+  INC --> POL[Policy Engine {decision matrix}]
+  ORCH -->|incident.detail / evidence.search| EV[Event Service]
+  POL -->|REQUIRE_APPROVAL| AWAIT[AWAITING_APPROVAL]
+  AWAIT -->|approve (ops)| INC
+  INC -->|remediation command| KAFKA
+  KAFKA --> REM[Remediation Executor]
+  REM -->|result| INC
+  INC -->|verified outcome| LEARN[(learn store)]
+  EV --> PG[(PostgreSQL fallback)]
+```
 
 ## Stack
 
-| Area | Choice |
-|---|---|
-| Language / runtime | **Java 25** |
-| Framework | Spring Boot 4.1.x, Spring Cloud 2025.1.x (Oakwood) |
-| Build | Maven multi-module, Java 25 toolchain |
-| Streaming | Apache Kafka (KRaft) + Kafka Streams |
-| Storage | PostgreSQL + Flyway, Redis |
-| AI | Spring AI, **pluggable** (default Ollama, local + free; `none` = rule-based) |
-| Observability | OpenTelemetry, Micrometer, Prometheus, Grafana, JFR streaming |
-| Search | OpenSearch (later phases) |
-| Security | Spring Security, OAuth2/OIDC (Keycloak) |
-| UI | Next.js (App Router) |
-| Infrastructure | Docker Compose (local), kind/k3d + Helm (Kubernetes, Phase 7) |
+Java 25 · Spring Boot 4 · Apache Kafka (KRaft) · PostgreSQL · Redis · Spring AI (pluggable:
+Ollama local, or `none` → rule-based) · OpenTelemetry · OpenSearch (optional) · Next.js (optional UI) ·
+Docker Compose / Helm-kind.
 
-## Repo layout
-
-```
-contracts/                 JSON Schema + Java records for events
-libs/common/               trace IDs, API errors, Kafka headers (thin)
-platform/api-gateway/
-platform/ingestion-service/
-platform/event-service/
-platform/correlation-engine/
-platform/incident-service/
-platform/agent-orchestrator/
-platform/policy-service/
-platform/remediation-service/
-demo/order-service/
-demo/payment-service/
-demo/inventory-service/
-demo/notification-service/
-ui/web/                    Next.js
-infra/compose/             Docker Compose profiles
-infra/k8s/                 Helm + kind/k3d (Phase 7)
-```
-
-Base package: `io.vykronis`
-
-## Requirements
-
-- **Java 25 JDK** (toolchain + runtime) — all services run on 25.
-- Docker Desktop with Compose v2.
-- Node.js 20+ (for the Next.js UI, Phase 1+).
-
-## Local-first
-
-Vykronis runs entirely locally and costs **$0** in required paid services:
-- Local LLM via Ollama (no paid OpenAI required).
-- Local Kafka, Postgres, Redis via Docker Compose.
-- Local Kubernetes via kind/k3d in later phases.
-
-Secrets live in `.env` (never committed); a `.env.example` is provided.
-
-## Phase status
-
-| Phase | Status |
-|---|---|
-| P0 Scaffolding | ✅ health-only JVMs + Compose core |
-| P1 Ingest + incident | ⬜ |
-| P2 Kafka Streams correlation | ⬜ |
-| P3 Observability depth | ⬜ |
-| P4 AI investigation | ⬜ |
-| P5 Policy + approval | ⬜ |
-| P6 Remediate + verify | ⬜ |
-| P7 K8s + CI | ⬜ |
-
-## Run locally (Phase 0)
-
-Prerequisites: JDK 25, Docker Desktop (Compose v2), Maven 3.9+.
-
-**1. Start the infra core (Kafka, Postgres, Redis):**
+## Run it
 
 ```powershell
-docker compose -f infra/compose/docker-compose.yml up -d
-```
-
-**2. Build the whole multi-module project:**
-
-```powershell
-mvn clean package -DskipTests
-```
-
-**3. Run a service (each on its own terminal) and check health:**
-
-```powershell
-mvn -pl platform/incident-service spring-boot:run
-```
-
-then visit `http://localhost:8084/actuator/health` → `{"status":"UP"}`.
-
-Ports (plan §14): gateway `8080`, ingestion `8081`, event `8082`, correlation `8083`,
-incident `8084`, orchestrator `8085`, policy `8086`, remediation `8087`.
-
-**4. Or run everything in Docker (builds each service image):**
-
-```powershell
-# one-time: shared slim jlink JRE (with a baked AppCDS archive) used as the
-# runtime stage of every service image.
-docker build -f infra/docker/runtime.Dockerfile -t vykronis/runtime:local .
+# full stack (13 services)
 docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.apps.yml --profile apps up -d --build
+
+# low-RAM hosts (9 services, terminal-only demo, logged to file)
+powershell -ExecutionPolicy Bypass -File infra/compose/mini-up.ps1   # bring-up
+powershell -ExecutionPolicy Bypass -File infra/compose/run-demo.ps1  # demo -> Notes\demo-logs\demo-*.log
 ```
 
-> Compose builds the app images as `vykronis/<service>:local` — the same tag the
-> Helm/kind demo (Phase 7) and CI's kind smoke (`Actions → kind-smoke → Run workflow`)
-> consume, so one `docker compose build` serves both paths.
-> To run the live cluster smoke locally: `./mvnw -pl libs/common test -Dhelm.smoke.kind=true`
-> (it reuses the `vykronis-smoke` kind cluster).
+Dashboard at `http://<docker-vm-ip>:8080/` (served by the gateway — no Node needed).
 
-**5. Health smoke check across all 8 services:**
+## Repository layout
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/health-check.ps1
 ```
+contracts/                 Kafka contracts: events, commands, results (public models)
+libs/common/               shared trace IDs, API errors, Kafka headers
+platform/                  9 Spring Boot services (gateway, ingestion, event, correlation,
+                           incident, orchestrator, policy, remediation, schema-registry)
+infra/compose/             Docker Compose profiles + demo runner scripts
+docs/                      design/phase docs; demo runbooks
+ui/web/                    optional Next.js dashboard
+demo/                      sample services producing telemetry
+```
+
+## Engineering notes
+
+- Every container runs under a **memory budget** so the whole stack boots on a 7.9 GB laptop —
+  a real constraint you can check in the compose files (`mem_limit` per service).
+- Volumes hold all demo data — never `docker compose down -v` (the README respects it for you).
+- `RESOLVED` (executor → verify hop) requires the `observability`/`search`/`ai` profiles —
+  documented, deliberate, and present in the compose project.
+
+## Status
+
+Core pipeline **functional**: ingest → detect → investigate → policy → human approval →
+remediation command → REMEDIATING, verified live. Remaining deploy steps (Kubernetes/CI,
+AI-provider wiring, full RESOLVED with infra profiles) are documented in `docs/`.

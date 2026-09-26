@@ -1,0 +1,35 @@
+# Vykronis — lean bring-up overlay for low-RAM hosts (this dev laptop).
+#
+# Usage (from infra/compose/):
+#   docker compose -f docker-compose.yml -f docker-compose.apps.yml \
+#                  -f docker-compose.lean.yml --profile apps up -d
+#
+# What it does (all safe, keeps volumes):
+#   1. Excludes schema-registry and payment-service — leaf services no other
+#      container depends on (verified against the compose dependency graph).
+#   2. Tightens core caps (kafka 1g->768m, postgres 768m->512m) so the VM has
+#      ~1GB of real headroom under the Dock WSL memory cap instead of thrashing.
+#   3. Keeps all 9 state-machine + gateway JVMs at 512m (correlation 640m) —
+#      the demo loop and REMEDIATING still work without schema-registry.
+#   Persisted volumes are untouched (never used with -v / --volumes).
+name: vykronis
+
+services:
+  # Excluded leaf services — pulled out of the `apps` profile so they never boot.
+  schema-registry:
+    profiles: ["never-start"]
+
+  payment-service:
+    profiles: ["never-start"]
+
+  # Core caps shaved to leave RAM for Windows itself on a 7.9GB host.
+  kafka:
+    mem_limit: 768m
+    environment:
+      KAFKA_HEAP_OPTS: -Xms192m -Xmx384m
+
+  postgres:
+    mem_limit: 512m
+
+  correlation-engine:
+    mem_limit: 640m
