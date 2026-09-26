@@ -124,4 +124,4 @@ AI-provider wiring, full RESOLVED with infra profiles) are documented in `docs/`
 
 ---
 
-© 2026 sreelekha-22. All rights reserved. See [LICENSE](LICENSE).
+© 2026 Sreelekha G. All rights reserved. See [LICENSE](LICENSE).
