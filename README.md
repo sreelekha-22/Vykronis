@@ -75,12 +75,21 @@ Docker Compose / Helm-kind.
 
 ## Run it
 
+One-time build — the shared slim jlink JRE base image and all service images:
+
+```powershell
+docker build -f infra/docker/runtime.Dockerfile -t vykronis/runtime:local .
+docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.apps.yml --profile apps build
+```
+
+Bring the stack up:
+
 ```powershell
 # full stack (13 services)
-docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.apps.yml --profile apps up -d --build
+docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.apps.yml --profile apps up -d
 
 # low-RAM hosts (9 services, terminal-only demo, logged to file)
-powershell -ExecutionPolicy Bypass -File infra/compose/mini-up.ps1   # bring-up
+powershell -ExecutionPolicy Bypass -File infra/compose/mini-up.ps1   # bring-up (needs the images built above)
 powershell -ExecutionPolicy Bypass -File infra/compose/run-demo.ps1  # demo -> Notes\demo-logs\demo-*.log
 ```
 
