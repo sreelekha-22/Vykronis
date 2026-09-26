@@ -59,7 +59,7 @@ flowchart LR
   INC --> POL["Policy Engine (decision matrix)"]
   ORCH -->|incident.detail / evidence.search| EV[Event Service]
   POL -->|REQUIRE_APPROVAL| AWAIT[AWAITING_APPROVAL]
-  AWAIT -->|approve (ops)| INC
+  AWAIT -->|ops approves| INC
   INC -->|remediation command| KAFKA
   KAFKA --> REM[Remediation Executor]
   REM -->|result| INC
