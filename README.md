@@ -40,7 +40,7 @@ PostgreSQL. The demo runner logs each phase with live status polls (see `demo-li
 
 | Question | What the code actually does |
 |---|---|
-| How are incidents born? | `ingestion-service` → Kafka → `correlation-engine` (60s tumbling windows on `error_rate`) |
+| How are incidents born? | `ingestion-service` → Kafka → `correlation-engine` (60s windowed detection on `error_rate`) |
 | How is root cause found? | `agent-orchestrator` runs a **tool-calling agent** over an allow-listed tool set (`incident.detail`, `evidence.search`); AI provider first, **deterministic rule-based fallback** (slowest-trace attribution) otherwise — it never fabricates evidence |
 | What stops it from wrecking prod? | A **fail-closed decision matrix** in `policy-service`: service-to-service automation is DENIED for PROD; only a named human approver (`vykronis-approver`) can authorize → `REQUIRE_APPROVAL` |
 | Where is the human gate? | `DEFAULT → AWAITING_APPROVAL → approve → REMEDIATING` — a real endpoint, a real actor model, an audit trail |
@@ -51,12 +51,12 @@ PostgreSQL. The demo runner logs each phase with live status polls (see `demo-li
 
 ```mermaid
 flowchart LR
-  UI[Served dashboard UI] --> GW[API Gateway]
+  UI[Dashboard UI] --> GW[API Gateway]
   ING[Ingestion] -->|events| KAFKA[(Kafka bus)]
-  KAFKA --> CORR[Correlation / detect]
-  CORR --> INC[Incident Service {state machine}]
+  KAFKA --> CORR[Correlation engine]
+  CORR --> INC["Incident Service (state machine)"]
   INC --> ORCH[Orchestrator tool agent]
-  INC --> POL[Policy Engine {decision matrix}]
+  INC --> POL["Policy Engine (decision matrix)"]
   ORCH -->|incident.detail / evidence.search| EV[Event Service]
   POL -->|REQUIRE_APPROVAL| AWAIT[AWAITING_APPROVAL]
   AWAIT -->|approve (ops)| INC
