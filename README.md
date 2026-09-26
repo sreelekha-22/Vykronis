@@ -36,7 +36,7 @@ Lifecycle of one incident, captured from a live run:
 The state machine is enforced in the incident-service; every transition is persisted in
 PostgreSQL. The demo runner logs each phase with live status polls (see `demo-live.sh`).
 
-## Why it isn't a toy
+## Engineering substance
 
 | Question | What the code actually does |
 |---|---|
